@@ -26,6 +26,7 @@ def main():
 
     try:
         # Membuat aplikasi Qt
+        #ok
         app = QApplication(sys.argv)
 
         # Membuat dan menampilkan main window
