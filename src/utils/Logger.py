@@ -6,7 +6,7 @@ Tujuan: Konfigurasi logging terpusat
 import logging
 import os
 from datetime import datetime
-from Tubes3_plscukup.config import LOG_LEVEL, LOG_FILE
+from config import LOG_LEVEL, LOG_FILE
 
 def setupLogger():
     """
@@ -21,7 +21,24 @@ def setupLogger():
     - Mengatur format log
     - Mengatur level log
     """
-    pass
+    logger = logging.getLogger("ATSLogger")
+    logger.setLevel(LOG_LEVEL)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    # File handler
+    if LOG_FILE:
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        file_handler = logging.FileHandler(LOG_FILE)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    logger.propagate = False
+    return logger
 
 def getLogger(name):
     """

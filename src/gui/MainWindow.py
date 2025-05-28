@@ -6,9 +6,9 @@ Tujuan: Jendela GUI utama dengan semua komponen aplikasi
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from .searchWidget import SearchWidget
-from .resultWidget import ResultWidget
-from .summaryWidget import SummaryWidget
+from .SearchWidget import SearchWidget
+from .ResultWidget import ResultWidget
+from .SummaryWidget import SummaryWidget
 
 class MainWindow(QMainWindow):
     """

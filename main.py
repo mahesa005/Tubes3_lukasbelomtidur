@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).parent / 'src'))
 
 from PyQt5.QtWidgets import QApplication
 from gui.MainWindow import MainWindow
-from utils.logger import setupLogger
+from utils.Logger import setupLogger
 
 def main():
     """
