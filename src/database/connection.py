@@ -1,35 +1,22 @@
-"""
-Manajemen Koneksi Database
-Tujuan: Mengelola koneksi dan operasi database MySQL
-"""
 
 import mysql.connector
 from mysql.connector import Error
 import logging
-
-# Ganti import ini agar mengimpor config.py yang ada di root proyek
 from config import DATABASE_CONFIG
+from .models import DatabaseSchema 
 
-# Setting sederhana untuk logging
 logger = logging.getLogger(__name__)
 if not logger.handlers:
-    # Jika belum ada handler, tambahkan satu handler default
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)  # Anda bisa ubah ke DEBUG jika perlu detail
+    h = logging.StreamHandler()
+    fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    h.setFormatter(fmt)
+    logger.addHandler(h)
+    logger.setLevel(logging.INFO)
 
 
 class DatabaseConnection:
     """
     Manajer koneksi database MySQL
-
-    TODO:
-    - Implementasi connection pooling
-    - Tambahkan dukungan transaksi
-    - Tangani error koneksi dengan baik
-    - Implementasi logika rekoneksi
     """
 
     def __init__(self):
@@ -39,23 +26,25 @@ class DatabaseConnection:
 
     def connect(self):
         """
-        Membuka koneksi ke database
+        Membuka koneksi ke database menggunakan konfigurasi di DATABASE_CONFIG
 
         Returns:
             bool: True jika koneksi berhasil, False jika gagal
+
+        TODO:
+        - Implementasi connection pooling (nanti)
+        - Atur timeout reconnect (nanti)
         """
         try:
-            # Gunakan konfigurasi dari config.py
-            cfg = DATABASE_CONFIG
             self.connection = mysql.connector.connect(
-                host=cfg['host'],
-                user=cfg['user'],
-                password=cfg['password'],
-                database=cfg['database'],
-                port=cfg.get('port', 3306)
+                host     = DATABASE_CONFIG['host'],
+                user     = DATABASE_CONFIG['user'],
+                password = DATABASE_CONFIG['password'],
+                database = DATABASE_CONFIG['database'],
+                port     = DATABASE_CONFIG['port']
             )
             self.cursor = self.connection.cursor(buffered=True)
-            logger.info("Koneksi ke database MySQL berhasil.")
+            logger.info("Koneksi ke database berhasil.")
             return True
         except Error as e:
             logger.error(f"Gagal terkoneksi ke MySQL: {e}")
@@ -66,18 +55,17 @@ class DatabaseConnection:
         Menutup koneksi database
 
         TODO:
-        - Tutup cursor dan koneksi
-        - Tangani error saat cleanup
+        - Tangani error saat cleanup (misal jika cursor sudah tertutup)
         """
         try:
             if self.cursor:
                 self.cursor.close()
-                logger.info("Cursor database ditutup.")
+                logger.info("Cursor ditutup.")
             if self.connection:
                 self.connection.close()
                 logger.info("Koneksi database ditutup.")
         except Error as e:
-            logger.error(f"Error saat menutup koneksi database: {e}")
+            logger.error(f"Error saat menutup koneksi: {e}")
 
     def execute(self, query, params=None):
         """
@@ -89,29 +77,33 @@ class DatabaseConnection:
 
         Returns:
             bool: True jika berhasil, False jika gagal
+
+        TODO:
+        - Logging lebih detail (levels)
+        - Tangani deadlock / retry jika perlu
         """
         if self.connection is None or self.cursor is None:
-            logger.warning("Belum terkoneksi. Memanggil connect().")
             if not self.connect():
                 return False
-
         try:
             if params:
                 self.cursor.execute(query, params)
             else:
                 self.cursor.execute(query)
-            # Jika query-nya INSERT/UPDATE/DELETE, commit agar perubahan disimpan
-            if query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER")):
+
+            # jika query ubah data, commit perubahan
+            if query.strip().upper().startswith(
+                ("INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER", "TRUNCATE")
+            ):
                 self.connection.commit()
-            logger.debug(f"Eksekusi query berhasil: {query} | params: {params}")
             return True
         except Error as e:
-            logger.error(f"Gagal menjalankan query: {query}\nError: {e}")
+            logger.error(f"Gagal menjalankan query:\n{query}\nError: {e}")
             return False
 
     def fetchOne(self, query, params=None):
         """
-        Menjalankan query dan mengambil satu hasil
+        Menjalankan query SELECT dan mengambil satu hasil
 
         Args:
             query (str): Query SQL
@@ -119,103 +111,79 @@ class DatabaseConnection:
 
         Returns:
             tuple: Hasil query atau None
+
+        TODO:
+        - Tangani kasus timeout atau reconnect otomatis
         """
         if self.connection is None or self.cursor is None:
-            logger.warning("Belum terkoneksi. Memanggil connect().")
             if not self.connect():
                 return None
-
         try:
             if params:
                 self.cursor.execute(query, params)
             else:
                 self.cursor.execute(query)
-
-            result = self.cursor.fetchone()
-            logger.debug(f"fetchOne: {query} | params: {params} → {result}")
-            return result
+            return self.cursor.fetchone()
         except Error as e:
-            logger.error(f"fetchOne gagal untuk query: {query}\nError: {e}")
+            logger.error(f"fetchOne gagal: {e}")
             return None
 
     def fetchAll(self, query, params=None):
         """
-        Menjalankan query dan mengambil semua hasil
+        Menjalankan query SELECT dan mengambil semua hasil
 
         Args:
             query (str): Query SQL
             params (tuple): Parameter query
 
         Returns:
-            list: Daftar hasil query (bisa kosong)
+            list: Daftar hasil query
+
+        TODO:
+        - Support paginasi di query besar
         """
         if self.connection is None or self.cursor is None:
-            logger.warning("Belum terkoneksi. Memanggil connect().")
             if not self.connect():
                 return []
-
         try:
             if params:
                 self.cursor.execute(query, params)
             else:
                 self.cursor.execute(query)
-
-            results = self.cursor.fetchall()
-            logger.debug(f"fetchAll: {query} | params: {params} → {len(results)} baris")
-            return results
+            return self.cursor.fetchall()
         except Error as e:
-            logger.error(f"fetchAll gagal untuk query: {query}\nError: {e}")
+            logger.error(f"fetchAll gagal: {e}")
             return []
 
     def createTables(self):
         """
-        Membuat tabel database jika belum ada
+        Membuat tabel database jika belum ada, berdasarkan skema di DatabaseSchema.
 
         TODO:
-        - Jalankan perintah CREATE TABLE
-        - Tangani error pembuatan tabel
-        - Buat index
+        - Tambahkan pembuatan index setelah tabel dibuat (misal index di email, status)
+        - Tangani migration (versi skema) jika struktur berubah ke depan
         """
-        # Contoh struktur tabel untuk ApplicantProfile dan ApplicationDetail.
-        # Sesuaikan nama kolom maupun tipe data jika di seed.py ada definisi berbeda.
-        table_statements = [
-            """
-            CREATE TABLE IF NOT EXISTS ApplicantProfile (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255),
-                phone VARCHAR(50),
-                resume_path VARCHAR(500),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS ApplicationDetail (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                applicant_id INT NOT NULL,
-                keyword VARCHAR(255) NOT NULL,
-                match_count INT DEFAULT 0,
-                similarity_score FLOAT DEFAULT 0,
-                FOREIGN KEY (applicant_id) REFERENCES ApplicantProfile(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            """
-            # Tambahkan lebih banyak CREATE TABLE jika perlu
+        # ambil perintah create tabel dari DatabaseSchema
+        statements = [
+            DatabaseSchema.CREATE_APPLICANT_PROFILE,
+            DatabaseSchema.CREATE_APPLICATION_DETAIL
         ]
 
-        # Pastikan terkoneksi sebelum membuat tabel
+        # ini pastiin koneksi dibuka
         if self.connection is None or self.cursor is None:
             if not self.connect():
                 return
 
-        for stmt in table_statements:
+        for stmt in statements:
             try:
                 self.cursor.execute(stmt)
-                logger.info("Berhasil menjalankan: \n" + stmt.strip())
+                logger.info("Berhasil menjalankan create query:\n" + stmt.strip())
             except Error as e:
-                logger.error(f"Gagal membuat/mengupdate tabel: {e}")
+                logger.error(f"Gagal menciptakan/memperbarui tabel: {e}\nQuery:\n{stmt}")
 
-        # Commit sekali lagi jika ada perubahan
         try:
             self.connection.commit()
         except Error as e:
             logger.error(f"Gagal commit setelah createTables: {e}")
+        finally:
+            self.disconnect()

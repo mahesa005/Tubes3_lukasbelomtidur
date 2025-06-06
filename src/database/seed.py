@@ -1,26 +1,15 @@
-# ===== src/database/seed.py =====
-"""
-Script utama untuk membuat tabel dan melakukan seeding data ke database ATS.
-Menggabungkan:
-  1. DatabaseConnection.createTables() – memastikan tabel dibuat.
-  2. Seeding data (dari Resume.csv & sampel dummy).
-"""
-
 import csv
 import os
 import logging
 import random
 from pathlib import Path
+from faker import Faker
 
 from .connection import DatabaseConnection
 from config import RESUME_CSV_PATH, DATA_DIR
 
 
 class DataSeeder:
-    """
-    Kelas untuk melakukan seeding data ke database.
-    """
-
     def __init__(self):
         self.db = DatabaseConnection()
         self.logger = logging.getLogger(__name__)
@@ -32,9 +21,6 @@ class DataSeeder:
             self.logger.setLevel(logging.INFO)
 
     def clearAllData(self):
-        """
-        Truncate tabel ApplicantProfile & ApplicationDetail.
-        """
         if not self.db.connect():
             self.logger.error("clearAllData: Gagal koneksi.")
             return
@@ -50,149 +36,101 @@ class DataSeeder:
         finally:
             self.db.disconnect()
 
-    def seedFromCSV(self):
-        """
-        Membaca Resume.csv dan insert ke ApplicantProfile:
-          (name, email, phone, resume_path)
-
-        Karena CSV hanya punya kolom ID, Resume_str, Resume_html, Category,
-        kita gunakan ID sebagai 'name', email & phone dibiarkan NULL,
-        dan resume_path dari file PDF di DATA_DIR/<Category>/<ID>.pdf.
-        """
-        if not self.db.connect():
-            self.logger.error("seedFromCSV: Gagal koneksi.")
-            return
-
-        if not RESUME_CSV_PATH.exists():
-            self.logger.error(f"seedFromCSV: Resume.csv tidak ditemukan di {RESUME_CSV_PATH}")
-            self.db.disconnect()
-            return
-
-        inserted = 0
-        with open(RESUME_CSV_PATH, mode="r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                external_id_raw = row.get("ID", "").strip()
-                category       = row.get("Category", "").strip()
-
-                if not external_id_raw or not category:
-                    self.logger.warning(f"seedFromCSV: Data kurang lengkap, skip → {row}")
-                    continue
-
-                # Nama file PDF: "<ID>.pdf"
-                pdf_path = Path(DATA_DIR) / category / f"{external_id_raw}.pdf"
-                if not pdf_path.exists():
-                    self.logger.warning(f"seedFromCSV: PDF tidak ditemukan → {pdf_path}")
-                    continue
-
-                # Karena tabel ApplicantProfile punya kolom (name, email, phone, resume_path)
-                insert_query = """
-                    INSERT INTO ApplicantProfile (name, email, phone, resume_path)
-                    VALUES (%s, %s, %s, %s)
-                """
-                params = (
-                    external_id_raw,  # menyimpan ID sebagai 'name'
-                    None,             # email tidak tersedia di CSV
-                    None,             # phone tidak tersedia
-                    str(pdf_path)
-                )
-
-                if self.db.execute(insert_query, params):
-                    inserted += 1
-                    self.logger.info(f"seedFromCSV: Inserted ID={external_id_raw}")
-                else:
-                    self.logger.error(f"seedFromCSV: Gagal insert ID={external_id_raw}")
-
-        self.logger.info(f"seedFromCSV: Total baris di‐insert → {inserted}")
-        self.db.disconnect()
-
     def generateSampleApplicants(self, count=10):
-        """
-        Membuat data dummy untuk ApplicantProfile (name/email/phone/resume_path).
-        """
+
+        # 1) buka koneksi ke database
         if not self.db.connect():
             self.logger.error("generateSampleApplicants: Gagal koneksi.")
             return
 
-        inserted = 0
-        for i in range(1, count + 1):
-            name        = f"SampleUser{i}"
-            email       = f"user{i}@example.com"
-            phone       = f"0812{random.randint(10000000, 99999999)}"
-            resume_path = None
+        fake = Faker()
+        base_data_dir = Path(DATA_DIR)
 
-            insert_query = """
-                INSERT INTO ApplicantProfile (name, email, phone, resume_path)
-                VALUES (%s, %s, %s, %s)
+        role_dirs = [d for d in base_data_dir.iterdir() if d.is_dir()]
+        if not role_dirs:
+            self.logger.error(f"generateSampleApplicants: Tidak ada subfolder di {base_data_dir}")
+            self.db.disconnect()
+            return
+
+        for _ in range(count):
+            # dummy si AP
+            first_name = fake.first_name()
+            last_name  = fake.last_name()
+            dob = fake.date_of_birth(minimum_age=18, maximum_age=60)
+            address    = fake.address().replace("\n", ", ")
+            phone      = f"0812{random.randint(10_000_000, 99_999_999)}"
+
+            # insert ke AP
+            insert_profile = """
+                INSERT INTO ApplicantProfile
+                  (first_name, last_name, date_of_birth, address, phone_number)
+                VALUES (%s, %s, %s,%s, %s)
             """
-            params = (name, email, phone, resume_path)
+            params_profile = (first_name, last_name, dob, address, phone)
 
-            if self.db.execute(insert_query, params):
-                inserted += 1
+            if not self.db.execute(insert_profile, params_profile):
+                self.logger.error("generateSampleApplicants: Gagal insert dummy applicant ke ApplicantProfile")
+                continue  # lanjutkan ke kandidat berikutnya
+
+            # ambil applicant_id yang baru aja di‐insert
+            new_applicant_id = self.db.cursor.lastrowid
+            self.logger.info(
+                f"generateSampleApplicants: Inserted ApplicantProfile → "
+                f"id={new_applicant_id}, name={first_name} {last_name}, phone={phone}"
+            )
+
+            # pilih 1 folder dari folder data
+            chosen_role_dir = random.choice(role_dirs)
+            application_role = chosen_role_dir.name
+
+            # milih pdf dari folder itu
+            pdf_files = list(chosen_role_dir.glob("*.pdf"))
+            if not pdf_files:
+                self.logger.warning(
+                    f"generateSampleApplicants: Folder '{application_role}' kosong (tidak ada PDF), "
+                    f"skipping ApplicationDetail untuk applicant_id={new_applicant_id}"
+                )
+                continue
+
+            chosen_pdf = random.choice(pdf_files)
+            cv_path = str(chosen_pdf)
+
+            # insert ke AD
+            insert_detail = """
+                INSERT INTO ApplicationDetail
+                  (applicant_id, application_role, cv_path)
+                VALUES (%s, %s, %s)
+            """
+            params_detail = (new_applicant_id, application_role, cv_path)
+
+            if self.db.execute(insert_detail, params_detail):
+                self.logger.info(
+                    f"generateSampleApplicants: Inserted ApplicationDetail → "
+                    f"applicant_id={new_applicant_id}, role='{application_role}', cv='{cv_path}'"
+                )
             else:
-                self.logger.error(f"generateSampleApplicants: Gagal insert dummy {name}")
+                self.logger.error(
+                    f"generateSampleApplicants: Gagal insert ApplicationDetail untuk applicant_id={new_applicant_id}"
+                )
 
-        self.logger.info(f"generateSampleApplicants: Total dummy di‐insert → {inserted}")
+        # trus tutup
         self.db.disconnect()
 
-    def linkCVFiles(self):
-        """
-        (Opsional) Jika ada baris yang resume_path= NULL, cari PDF berdasar nama file.
-        Karena kita sudah meng‐insert dari CSV, biasanya resume_path sudah terisi.
-        Namun jika ada yang kosong (misal dummy), Anda bisa skip atau implementasi sendiri.
-        """
-        # Dalam skema ini, kita tidak melakukan update lagi.
-        self.logger.info("linkCVFiles: Tidak ada aksi karena resume_path sudah di-handle.")
-
     def seedTestData(self):
-        """
-        1. clearAllData()
-        2. seedFromCSV() jika ada Resume.csv
-        3. generateSampleApplicants() untuk tambahan dummy
-        4. linkCVFiles() (tidak wajib)
-        """
         self.logger.info("seedTestData: Mulai seeding.")
         self.clearAllData()
-
-        if RESUME_CSV_PATH.exists():
-            self.seedFromCSV()
-        else:
-            self.logger.warning("seedTestData: Resume.csv tidak ditemukan, skip seedFromCSV().")
-
-        self.generateSampleApplicants(count=10)
-        # linkCVFiles tidak melakukan apapun di contoh ini
+        self.generateSampleApplicants(20)
         self.logger.info("seedTestData: Selesai seeding.")
 
 def main():
-    """
-    1. Buat tabel lewat DatabaseConnection.createTables()
-    2. Jalankan DataSeeder.seedTestData()
-    """
-    # Setup logger
-    logger = logging.getLogger(__name__)
-    if not logger.handlers:
-        h = logging.StreamHandler()
-        fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        h.setFormatter(fmt)
-        logger.addHandler(h)
-        logger.setLevel(logging.INFO)
-
-    # 1. Create/update tabel
-    db = DatabaseConnection()
-    logger.info("main: Memulai pembuatan/memperbarui tabel.")
-    if db.connect():
-        db.createTables()
-        db.disconnect()
-        logger.info("main: Tabel berhasil dibuat/diupdate.")
-    else:
-        logger.error("main: Gagal koneksi ke database.")
-        return
-
-    # 2. Seeding data
-    logger.info("main: Mulai seeding data.")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     seeder = DataSeeder()
+
+    seeder.db.connect()
+    seeder.db.createTables()
+    seeder.db.disconnect()
+
     seeder.seedTestData()
-    logger.info("main: Proses seeding selesai.")
 
 if __name__ == "__main__":
     main()
