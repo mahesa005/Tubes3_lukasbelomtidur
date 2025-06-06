@@ -12,7 +12,7 @@ DATABASE_CONFIG = {
 
 # File Paths
 BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / 'src' / 'archive' / 'data'
+DATA_DIR = BASE_DIR / 'src' / 'archive' / 'data' / 'data'
 RESUME_CSV_PATH = BASE_DIR / 'src' / 'archive' / 'Resume' / 'Resume.csv'
 
 # Algorithm Settings
