@@ -4,10 +4,10 @@ Modul Ekstraksi Teks PDF
 Tujuan: Ekstraksi teks dari file PDF CV
 """
 
-import PyPDF2
-import pdfplumber
+import pypdf
 from pathlib import Path
 import logging
+import os
 
 class PDFExtractor:
     """
@@ -112,3 +112,53 @@ class PDFExtractor:
         - Informasi ukuran file
         """
         pass
+
+    # Versi mahesa
+    def PDFextract(self, pdfPath):
+        """
+        Extract pdf text into string (still include newlines)
+        """
+        try:
+            if not os.path.exists(pdfPath):
+                print(f"Error: File PDF tidak ditemukan pada: {pdfPath}")
+
+            full_text = ""
+            with open(pdfPath, 'rb') as file:
+                # Create object reader
+                reader = pypdf.PdfReader(file)
+                # Extract pages
+                pageTotal = len(reader.pages)
+
+                for page_num in range(pageTotal):
+                    page = reader.pages[page_num]
+                    page_text = page.extract_text()
+                    if page_text:
+                        cleaned_text = page_text.strip()
+                        full_text += cleaned_text + "\n"
+        except pypdf.errors.PdfReadError: # Error class juga disesuaikan
+            print(f"Error: Gagal membaca file PDF {pdfPath}. Mungkin terenkripsi atau rusak.")
+            return ""
+        except Exception as e:
+            print(f"Terjadi error tak terduga saat memproses {pdfPath}: {e}")
+            return ""
+        return full_text.strip()
+
+
+
+
+# Tester
+def main():
+        """Main function untuk debugging dan testing"""
+        print("=== PDF Extractor Debug Mode ===\n")
+        
+        # Inisialisasi extractor
+        extractor = PDFExtractor()
+        
+        output = extractor.PDFextract(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ACCOUNTANT\10554236.pdf")
+
+        print(output)
+if __name__ == "__main__":
+        main()
+
+
+
