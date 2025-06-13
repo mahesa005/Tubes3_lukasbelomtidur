@@ -7,6 +7,7 @@ Tujuan: Mengekstrak informasi spesifik dari teks CV menggunakan regex
 import re
 from datetime import datetime
 import logging
+import unicodedata
 
 class RegexExtractor:
     """
@@ -162,11 +163,51 @@ class RegexExtractor:
         """
         pass
 
-    def removeAllNewLine(self, text):
-        """
-        Menghilangkan seluruh newline dari string
-        """
-        newLinePattern = r'\n' 
-        cleanString = re.sub(newLinePattern, '', text)
+    def cleanseText(self, text):
+        
+        # 1. Normalize unicode
+        cleaned_text = unicodedata.normalize('NFKC', text)
 
-        return cleanString
+        # 2. Remove non-visual characters
+        cleaned_text = re.sub(r'[\x00-\x1F\x7F]', '', cleaned_text)
+
+        # 3. Remove bullet and other unneccessary symbols
+        cleaned_text = re.sub(r'[•▪●◦\uf0b7\u2022\u25cf]', '', cleaned_text)
+
+        # 4. Remove extra whitspace
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+
+        # 5. Remove extra white space and beginning and end of string
+        cleaned_text = cleaned_text.strip()
+
+        # 6. Clean up spacing around punctuation
+        cleaned_text = re.sub(r'\s+([,.;:!?])', r'\1', cleaned_text)  # Remove space before punctuation
+        
+        return cleaned_text
+    
+
+    def cleanseTextN(self, text):
+        """
+        cleanse text but keep the newlines
+        """
+        # 1. Normalize unicode
+        cleaned_text = unicodedata.normalize('NFKC', text)
+
+        # 2. Remove non-visual characters
+        cleaned_text = re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', '', cleaned_text)
+
+        # 3. Remove bullet and other unneccessary symbols
+        cleaned_text = re.sub(r'[•▪●◦\uf0b7\u2022\u25cf]', '', cleaned_text)
+
+        # 4. Remove extra whitspace
+        # 4. Clean multiple spaces/tabs but keep single newlines
+        cleaned_text = re.sub(r'[ \t]+', ' ', cleaned_text)  # Multiple spaces/tabs -> single space
+        cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)  # Multiple newlines -> double newline max
+
+        # 5. Remove extra white space and beginning and end of string
+        cleaned_text = cleaned_text.strip()
+
+        # 6. Clean up spacing around punctuation
+        cleaned_text = re.sub(r'\s+([,.;:!?])', r'\1', cleaned_text)  # Remove space before punctuation
+        
+        return cleaned_text
