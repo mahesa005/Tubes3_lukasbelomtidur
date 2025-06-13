@@ -49,7 +49,7 @@ class KnuthMorrisPratt:
                     i += 1
         return lps
 
-    def search(self, text, pattern, caseSensitive=True):
+    def search(self, text, pattern, caseSensitive=True) -> list:
         """
         Mencari pola dalam teks menggunakan algoritma KMP
         
@@ -88,7 +88,7 @@ class KnuthMorrisPratt:
                     i += 1 
         return result
 
-    def searchMultiple(self, text, patterns, caseSensitive=True):
+    def searchMultiple(self, text, patterns, caseSensitive=True) -> dict:
         """
         Mencari beberapa pola dalam teks
         
