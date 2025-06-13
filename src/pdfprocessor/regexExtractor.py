@@ -161,3 +161,12 @@ class RegexExtractor:
         - Tangani error dari masing-masing ekstraktor
         """
         pass
+
+    def removeAllNewLine(self, text):
+        """
+        Menghilangkan seluruh newline dari string
+        """
+        newLinePattern = r'\n' 
+        cleanString = re.sub(newLinePattern, '', text)
+
+        return cleanString
