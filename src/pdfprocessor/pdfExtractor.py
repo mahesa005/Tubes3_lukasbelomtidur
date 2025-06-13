@@ -115,7 +115,7 @@ class PDFExtractor:
         pass
 
     # Versi mahesa
-    def PDFextract(self, pdfPath):
+    def PDFtoText(self, pdfPath):
         """
         Extract pdf text into string (still include newlines)
         """
@@ -142,19 +142,19 @@ class PDFExtractor:
         except Exception as e:
             print(f"Terjadi error tak terduga saat memproses {pdfPath}: {e}")
             return ""
-        return full_text.strip()
+        regex = RegexExtractor()
+        full_text = regex.cleanseTextN(full_text)
+        return full_text
     
-    # Versi mahesa
-    def PDFextractN(self, pdfPath):
+
+    def PDFExtractForMatch(self, pdfPath):
         """
-        Extract pdf text into string (remove newline)
+        Extract pdf text into string (remove newline) for summary
         """
         regex = RegexExtractor()
         # result string with all newline removed
-        result = regex.removeAllNewLine(self.PDFextract(pdfPath))
+        result = regex.cleanseText(self.PDFtoText(pdfPath))
         return result
-        
-
 
 # Tester
 def main():
@@ -164,8 +164,7 @@ def main():
         # Inisialisasi extractor
         extractor = PDFExtractor()
         
-        output = extractor.PDFextractN(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ACCOUNTANT\10554236.pdf")
-
+        output = extractor.PDFExtractForMatch(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ENGINEERING\10030015.pdf")
         print(output)
 if __name__ == "__main__":
         main()
