@@ -1,12 +1,6 @@
-"""
-Model Database untuk Sistem ATS
-Tujuan: Mendefinisikan skema database dan model ORM
-"""
-
 from dataclasses import dataclass
 from typing import Optional
 from datetime import date
-
 
 @dataclass
 class ApplicantProfile:
@@ -75,7 +69,6 @@ class ApplicationDetail:
             "application_role": self.application_role,
             "cv_path":          self.cv_path,
         }
-
 
 class DatabaseSchema:
 
