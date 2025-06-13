@@ -6,6 +6,7 @@ Tujuan: Ekstraksi teks dari file PDF CV
 
 import pypdf
 from pathlib import Path
+from regexExtractor import RegexExtractor
 import logging
 import os
 
@@ -142,8 +143,17 @@ class PDFExtractor:
             print(f"Terjadi error tak terduga saat memproses {pdfPath}: {e}")
             return ""
         return full_text.strip()
-
-
+    
+    # Versi mahesa
+    def PDFextractN(self, pdfPath):
+        """
+        Extract pdf text into string (remove newline)
+        """
+        regex = RegexExtractor()
+        # result string with all newline removed
+        result = regex.removeAllNewLine(self.PDFextract(pdfPath))
+        return result
+        
 
 
 # Tester
@@ -154,7 +164,7 @@ def main():
         # Inisialisasi extractor
         extractor = PDFExtractor()
         
-        output = extractor.PDFextract(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ACCOUNTANT\10554236.pdf")
+        output = extractor.PDFextractN(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ACCOUNTANT\10554236.pdf")
 
         print(output)
 if __name__ == "__main__":
