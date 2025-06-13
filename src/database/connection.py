@@ -15,26 +15,12 @@ if not logger.handlers:
 
 
 class DatabaseConnection:
-    """
-    Manajer koneksi database MySQL
-    """
-
     def __init__(self):
         """Inisialisasi koneksi database"""
         self.connection = None
         self.cursor = None
 
     def connect(self):
-        """
-        Membuka koneksi ke database menggunakan konfigurasi di DATABASE_CONFIG
-
-        Returns:
-            bool: True jika koneksi berhasil, False jika gagal
-
-        TODO:
-        - Implementasi connection pooling (nanti)
-        - Atur timeout reconnect (nanti)
-        """
         try:
             self.connection = mysql.connector.connect(
                 host     = DATABASE_CONFIG['host'],
@@ -51,12 +37,6 @@ class DatabaseConnection:
             return False
 
     def disconnect(self):
-        """
-        Menutup koneksi database
-
-        TODO:
-        - Tangani error saat cleanup (misal jika cursor sudah tertutup)
-        """
         try:
             if self.cursor:
                 self.cursor.close()
@@ -68,20 +48,6 @@ class DatabaseConnection:
             logger.error(f"Error saat menutup koneksi: {e}")
 
     def execute(self, query, params=None):
-        """
-        Menjalankan query SQL
-
-        Args:
-            query (str): Query SQL yang akan dijalankan
-            params (tuple): Parameter query
-
-        Returns:
-            bool: True jika berhasil, False jika gagal
-
-        TODO:
-        - Logging lebih detail (levels)
-        - Tangani deadlock / retry jika perlu
-        """
         if self.connection is None or self.cursor is None:
             if not self.connect():
                 return False
@@ -102,19 +68,6 @@ class DatabaseConnection:
             return False
 
     def fetchOne(self, query, params=None):
-        """
-        Menjalankan query SELECT dan mengambil satu hasil
-
-        Args:
-            query (str): Query SQL
-            params (tuple): Parameter query
-
-        Returns:
-            tuple: Hasil query atau None
-
-        TODO:
-        - Tangani kasus timeout atau reconnect otomatis
-        """
         if self.connection is None or self.cursor is None:
             if not self.connect():
                 return None
@@ -129,19 +82,6 @@ class DatabaseConnection:
             return None
 
     def fetchAll(self, query, params=None):
-        """
-        Menjalankan query SELECT dan mengambil semua hasil
-
-        Args:
-            query (str): Query SQL
-            params (tuple): Parameter query
-
-        Returns:
-            list: Daftar hasil query
-
-        TODO:
-        - Support paginasi di query besar
-        """
         if self.connection is None or self.cursor is None:
             if not self.connect():
                 return []
@@ -156,13 +96,6 @@ class DatabaseConnection:
             return []
 
     def createTables(self):
-        """
-        Membuat tabel database jika belum ada, berdasarkan skema di DatabaseSchema.
-
-        TODO:
-        - Tambahkan pembuatan index setelah tabel dibuat (misal index di email, status)
-        - Tangani migration (versi skema) jika struktur berubah ke depan
-        """
         # ambil perintah create tabel dari DatabaseSchema
         statements = [
             DatabaseSchema.CREATE_APPLICANT_PROFILE,
@@ -187,3 +120,57 @@ class DatabaseConnection:
             logger.error(f"Gagal commit setelah createTables: {e}")
         finally:
             self.disconnect()
+    
+    def createDatabase(self, db_name: str) -> bool:
+        # koneksi tanpa database dulu
+        try:
+            tmp_conn = mysql.connector.connect(
+                host     = DATABASE_CONFIG['host'],
+                user     = DATABASE_CONFIG['user'],
+                password = DATABASE_CONFIG['password'],
+                port     = DATABASE_CONFIG['port']
+            )
+            tmp_cursor = tmp_conn.cursor()
+            tmp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+            tmp_conn.commit()
+            tmp_cursor.close()
+            tmp_conn.close()
+            logger.info(f"Database `{db_name}` berhasil dibuat atau sudah ada.")
+            return True
+        except Error as e:
+            logger.error(f"createDatabase error: {e}")
+            return False
+
+    def useDatabase(self, db_name: str) -> bool:
+        if self.connection is None or self.cursor is None:
+            if not self.connect():
+                return False
+        try:
+            self.cursor.execute(f"USE `{db_name}`;")
+            logger.info(f"Switched to database `{db_name}`.")
+            return True
+        except Error as e:
+            logger.error(f"useDatabase error: {e}")
+            return False
+    
+    def dropDatabase(self, db_name: str) -> bool:
+        from mysql.connector import connect, Error
+
+        try:
+            # koneksi sementara tanpa pilih database
+            tmp = connect(
+                host     = DATABASE_CONFIG['host'],
+                user     = DATABASE_CONFIG['user'],
+                password = DATABASE_CONFIG['password'],
+                port     = DATABASE_CONFIG['port']
+            )
+            cur = tmp.cursor()
+            cur.execute(f"DROP DATABASE IF EXISTS `{db_name}`;")
+            tmp.commit()
+            cur.close()
+            tmp.close()
+            logger.info(f"Database `{db_name}` berhasil di-drop (jika ada).")
+            return True
+        except Error as e:
+            logger.error(f"dropDatabase error: {e}")
+            return False

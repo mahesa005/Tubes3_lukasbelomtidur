@@ -4,6 +4,7 @@ import logging
 import random
 from pathlib import Path
 from faker import Faker
+from config import DATABASE_CONFIG
 
 from .connection import DatabaseConnection
 from config import RESUME_CSV_PATH, DATA_DIR
@@ -123,14 +124,29 @@ class DataSeeder:
         self.logger.info("seedTestData: Selesai seeding.")
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    db_name = DATABASE_CONFIG['database']
+    db = DatabaseConnection()
+
+    if not db.dropDatabase(db_name):
+        return
+
+    if not db.createDatabase(db_name):
+        return
+
+    if not db.connect():
+        return
+    if not db.useDatabase(db_name):
+        return
+
+    db.createTables()
+
     seeder = DataSeeder()
+    seeder.db = db
 
-    seeder.db.connect()
-    seeder.db.createTables()
-    seeder.db.disconnect()
+    seeder.clearAllData()
+    seeder.generateSampleApplicants(30)
 
-    seeder.seedTestData()
+    db.disconnect()
 
 if __name__ == "__main__":
     main()
