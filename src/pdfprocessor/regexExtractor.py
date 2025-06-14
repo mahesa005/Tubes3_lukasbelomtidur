@@ -211,3 +211,30 @@ class RegexExtractor:
         cleaned_text = re.sub(r'\s+([,.;:!?])', r'\1', cleaned_text)  # Remove space before punctuation
         
         return cleaned_text
+    
+    def seperatePunctuations(self, text):
+        """
+        Memisahkan semua tanda baca dalam teks dengan sebuah spasi.
+        Contoh: "Hello,world!" -> "Hello , world !"
+                "Test.One" -> "Test . One"
+                "Buy 1 get 1." -> "Buy 1 get 1 ."
+                "end-to-end" -> "end - to - end" (jika '-' dianggap dipisah)
+
+        Args:
+            text (str): String teks yang akan diproses.
+
+        Returns:
+            str: String teks dengan tanda baca yang sudah dipisahkan spasi.
+        """
+        if not text:
+            return ""
+        # 1. Add whitespace sebelum punctuation
+        text = re.sub(r'(\S)([^\w\s])', r'\1 \2', text)
+
+        # 2. Add whitespace setelah punctuation
+        text = re.sub(r'([^\w\s])(\S)', r'\1 \2', text)
+
+        # 3. Remove every extra whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+
+        return text

@@ -12,7 +12,7 @@ from src.database.queries import (
 from config import DATABASE_CONFIG
 
 def main():
-    cv = '/Users/jonathankenanbudianto/Documents/coding/pyton/SEM4/tubesstima3/Tubes3_lukasbelomtidur/src/archive/data/data/BUSINESS-DEVELOPMENT/29014805.pdf'  # sesuaikan path-mu
+    cv = 'C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\DIGITAL-MEDIA\13343786.pdf'  # sesuaikan path-mu
     db = DatabaseConnection()
     db.connect()
     db.useDatabase(DATABASE_CONFIG['database'])
