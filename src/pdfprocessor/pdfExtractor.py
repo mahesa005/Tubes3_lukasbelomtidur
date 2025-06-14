@@ -157,17 +157,17 @@ class PDFExtractor:
         return result
 
 # Tester
-def main():
-        """Main function untuk debugging dan testing"""
-        print("=== PDF Extractor Debug Mode ===\n")
+# def main():
+#         """Main function untuk debugging dan testing"""
+#         print("=== PDF Extractor Debug Mode ===\n")
         
-        # Inisialisasi extractor
-        extractor = PDFExtractor()
+#         # Inisialisasi extractor
+#         extractor = PDFExtractor()
         
-        output = extractor.PDFExtractForMatch(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ENGINEERING\10030015.pdf")
-        print(output)
-if __name__ == "__main__":
-        main()
+#         output = extractor.PDFExtractForMatch(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ENGINEERING\10030015.pdf")
+#         print(output)
+# if __name__ == "__main__":
+#         main()
 
 
 

@@ -34,7 +34,32 @@ class LevenshteinDistance:
         - Tangani kasus khusus (string kosong)
         - Optimalkan kompleksitas memori
         """
-        pass
+        m = len(str1)
+        n = len(str2)
+
+        # create DP table
+        dp = [[0] * (n + 1) for _ in range(m + 1)] 
+        
+        # fill all base problems
+        for j in range(0, n + 1): # fill columns
+            dp[0][j] = j
+            
+        for i in range(0, m + 1): # fill rows
+            dp[i][0] = i
+        
+        # fill dp table to get final distance using lev dist algo
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if str1[i-1] == str2[j-1]:
+                    dp[i][j] = dp[i-1][j-1]
+                else:
+                    dp[i][j] = 1 + min(
+                        dp[i-1][j-1], # replace
+                        dp[i][j-1], # insert
+                        dp[i-1][j] # delete
+                    )
+        return dp[m][n] # return distance
+
 
     def similarity(self, str1, str2):
         """
@@ -73,3 +98,15 @@ class LevenshteinDistance:
         - Kembalikan hasil teratas
         """
         pass
+
+# def main():
+#     print("=== Levenshtein Distance Calculator Debug Mode ===\n")
+    
+#     ld_calculator = LevenshteinDistance()
+    
+#     # Test cases untuk calculate()
+#     print("--- Testing calculate() ---")
+#     print(ld_calculator.calculate("anjig", "mamalu"))
+
+# if __name__ == "__main__":
+#     main()
