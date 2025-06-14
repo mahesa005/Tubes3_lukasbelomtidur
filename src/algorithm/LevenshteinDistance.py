@@ -2,6 +2,19 @@
 Implementasi Algoritma Levenshtein Distance
 Tujuan: Menghitung jarak edit antar string untuk pencocokan fuzzy
 """
+import re
+try:
+    # Try relative import first (when used as module)
+    from ..pdfprocessor.regexExtractor import RegexExtractor
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    sys.path.insert(0, parent_dir)
+    
+    from pdfprocessor.regexExtractor import RegexExtractor
 
 class LevenshteinDistance:
     """
@@ -28,11 +41,6 @@ class LevenshteinDistance:
 
         Mengembalikan:
             int: Jarak Levenshtein
-
-        TODO:
-        - Implementasikan solusi dynamic programming
-        - Tangani kasus khusus (string kosong)
-        - Optimalkan kompleksitas memori
         """
         m = len(str1)
         n = len(str2)
@@ -109,7 +117,25 @@ class LevenshteinDistance:
         results.sort(key=lambda x: x[1], reverse=True)
 
         return results[:maxResults]
+    
+    def search(self, text, keyword, threshold=0.7, caseSensitive=True) -> list:
+        if not caseSensitive:
+            text = text.lower()  # lower text if not case sensitive
+            keyword = keyword.lower()
 
+        regex = RegexExtractor()
+        processed_text = regex.seperatePunctuations(text) # seperate punctuations
+        words = processed_text.split() # split words in string
+
+        result = self.findBestMatches(keyword, words, threshold)
+        return result
+    
+    def searchMultiple(self, text, keywords, threshold=0.7, caseSensitive=True) -> dict:
+        results = {}
+        for keyword in keywords:
+            results[keyword] = self.search(text, keyword, threshold, caseSensitive)
+        return results
+        
 # def main():
 #     print("=== Levenshtein Distance Module Test Suite ===\n")
     
@@ -140,31 +166,29 @@ class LevenshteinDistance:
 #     # --- Test similarity() ---
 #     print("\n--- Testing similarity() (Similarity Ratio 0.0-1.0) ---")
 #     test_cases_similarity = [
-#         ("kitten", "sitting", 0.5714),  # Jarak 3, max_len 7 -> (1 - 3/7) = 0.5714
-#         ("saturday", "sunday", 0.6250), # Jarak 3, max_len 8 -> (1 - 3/8) = 0.625
-#         ("apple", "aple", 0.8000),      # Jarak 1, max_len 5 -> (1 - 1/5) = 0.8
-#         ("hello", "hello", 1.0000),     # Jarak 0, max_len 5 -> (1 - 0/5) = 1.0
-#         ("", "abc", 0.0000),            # Jarak 3, max_len 3 -> (1 - 3/3) = 0.0
-#         ("abc", "", 0.0000),            # Jarak 3, max_len 3 -> (1 - 3/3) = 0.0
-#         ("", "", 1.0000),               # Jarak 0, max_len 0 -> (penanganan khusus) 1.0
-#         ("python", "pyhon", 0.8333)     # Jarak 1, max_len 6 -> (1 - 1/6) = 0.8333
+#         ("kitten", "sitting", 0.5714),
+#         ("saturday", "sunday", 0.6250),
+#         ("apple", "aple", 0.8000),
+#         ("hello", "hello", 1.0000),
+#         ("", "abc", 0.0000),
+#         ("abc", "", 0.0000),
+#         ("", "", 1.0000),
+#         ("python", "pyhon", 0.8333)
 #     ]
 
 #     for s1, s2, expected_sim in test_cases_similarity:
 #         actual_sim = ld_calculator.similarity(s1, s2)
-#         # Menggunakan abs() dan toleransi kecil untuk membandingkan float
 #         status = "PASSED" if abs(actual_sim - expected_sim) < 0.0001 else f"FAILED (Expected: {expected_sim:.4f}, Got: {actual_sim:.4f})"
 #         print(f"'{s1}' vs '{s2}' -> Similarity Ratio: {actual_sim:.4f} ({status})")
 
 #     # --- Test findBestMatches() ---
 #     print("\n--- Testing findBestMatches() ---")
 #     target_word_1 = "programing" # typo dari programming
-#     candidate_words_1 = ["programming", "programer", "java", "coding", "python", "software"]
+#     candidate_words_1 = ["programming", "programer", "java", "coding", "python", "software", ""] # Tambahkan string kosong untuk uji kasus
     
 #     print(f"\nTarget: '{target_word_1}'")
 #     print(f"Candidates: {candidate_words_1}")
 
-#     # Test dengan threshold default (0.7) dan maxResults default (10)
 #     print("\nBest Matches (threshold=0.7, maxResults=10):")
 #     best_matches_1 = ld_calculator.findBestMatches(target_word_1, candidate_words_1)
 #     if best_matches_1:
@@ -173,7 +197,6 @@ class LevenshteinDistance:
 #     else:
 #         print("  No matches found above the threshold.")
 
-#     # Test dengan threshold yang lebih ketat (misal 0.8) dan maxResults lebih kecil
 #     print("\nBest Matches (threshold=0.8, maxResults=2):")
 #     best_matches_2 = ld_calculator.findBestMatches(target_word_1, candidate_words_1, threshold=0.8, maxResults=2)
 #     if best_matches_2:
@@ -182,7 +205,6 @@ class LevenshteinDistance:
 #     else:
 #         print("  No matches found above the threshold.")
 
-#     # Test dengan target dan kandidat yang berbeda
 #     target_word_2 = "designer"
 #     candidate_words_2 = ["design", "desainer", "graphic designer", "desire", "drawing"]
 #     print(f"\nTarget: '{target_word_2}'")
@@ -196,5 +218,57 @@ class LevenshteinDistance:
 #     else:
 #         print("  No matches found above the threshold.")
 
+#     # --- Test search() ---
+#     print("\n--- Testing search() ---")
+#     sample_cv_text = "Saya adalah seorang Software Engineer berpengalaman di bidang Python dan ReactJS. Pernah mengerjakan project database SQL dan juga memiliki basic di C++. "
+    
+#     print(f"\nSample CV Text: '{sample_cv_text}'")
+
+#     print("\nSearch for 'pytton' (case-insensitive, threshold 0.7):")
+#     results_pytton = ld_calculator.search(sample_cv_text, "pytton", threshold=0.7, caseSensitive=False)
+#     if results_pytton:
+#         for word, score in results_pytton:
+#             print(f"  Found: '{word}' (Score: {score:.2f}%)")
+#     else:
+#         print("  No fuzzy matches found.")
+
+#     print("\nSearch for 'ReactJS' (case-sensitive, threshold 0.8):")
+#     results_reactjs = ld_calculator.search(sample_cv_text, "ReactJS", threshold=0.8, caseSensitive=True)
+#     if results_reactjs:
+#         for word, score in results_reactjs:
+#             print(f"  Found: '{word}' (Score: {score:.2f}%)")
+#     else:
+#         print("  No fuzzy matches found.")
+
+#     print("\nSearch for 'Engineer' (case-insensitive, threshold 0.9):")
+#     results_engineer = ld_calculator.search(sample_cv_text, "Engineer", threshold=0.9, caseSensitive=False)
+#     if results_engineer:
+#         for word, score in results_engineer:
+#             print(f"  Found: '{word}' (Score: {score:.2f}%)")
+#     else:
+#         print("  No fuzzy matches found.")
+
+#     # --- Test searchMultiple() ---
+#     print("\n--- Testing searchMultiple() ---")
+#     keywords_to_search = ["pythun", "reactj", "sqle", "c++", "engineer"]
+#     print(f"\nKeywords to search: {keywords_to_search}")
+
+#     multiple_results = ld_calculator.searchMultiple(sample_cv_text, keywords_to_search, threshold=0.7, caseSensitive=False)
+    
+#     for keyword, matches in multiple_results.items():
+#         print(f"\nResults for '{keyword}':")
+#         if matches:
+#             for word, score in matches:
+#                 print(f"  - Found: '{word}' (Score: {score:.2f}%)")
+#         else:
+#             print("  No fuzzy matches found for this keyword.")
+
+#     print("\n=== All Tests Completed ===\n")
+
 # if __name__ == "__main__":
 #     main()
+
+        
+        
+
+
