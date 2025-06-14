@@ -5,79 +5,20 @@ Tujuan: Ekstraksi teks dari file PDF CV
 """
 
 import pypdf
-from pathlib import Path
 from regexExtractor import RegexExtractor
 import logging
 import os
+from pathlib import Path
 
 class PDFExtractor:
     """
     Kelas untuk ekstraksi teks dari file PDF
-    
-    TODO:
-    - Implementasi ekstraksi menggunakan PyPDF2
-    - Implementasi ekstraksi menggunakan pdfplumber
-    - Menangani berbagai format PDF
-    - Optimasi untuk performa
     """
     
     def __init__(self):
         """Inisialisasi PDF extractor"""
         self.logger = logging.getLogger(__name__)
     
-    def extractWithPyPDF2(self, pdfPath):
-        """
-        Ekstraksi teks menggunakan PyPDF2
-        
-        Argumen:
-            pdfPath (str): Path ke file PDF
-            
-        Mengembalikan:
-            str: Teks yang diekstrak
-            
-        TODO:
-        - Buka file PDF
-        - Ekstrak teks dari semua halaman
-        - Menangani PDF terenkripsi
-        - Membersihkan teks hasil ekstraksi
-        """
-        pass
-    
-    def extractWithPdfplumber(self, pdfPath):
-        """
-        Ekstraksi teks menggunakan pdfplumber (lebih akurat)
-        
-        Argumen:
-            pdfPath (str): Path ke file PDF
-            
-        Mengembalikan:
-            str: Teks yang diekstrak
-            
-        TODO:
-        - Gunakan pdfplumber untuk ekstraksi
-        - Menangani ekstraksi tabel
-        - Menjaga format yang penting
-        """
-        pass
-    
-    def extractText(self, pdfPath, method='pdfplumber'):
-        """
-        Ekstraksi teks dengan metode yang dipilih
-        
-        Argumen:
-            pdfPath (str): Path ke file PDF
-            method (str): Metode ekstraksi ('pypdf2' atau 'pdfplumber')
-            
-        Mengembalikan:
-            str: Teks yang diekstrak
-            
-        TODO:
-        - Pilih metode ekstraksi
-        - Fallback ke metode lain jika gagal
-        - Penanganan error
-        - Pembersihan teks
-        """
-        pass
     
     def cleanText(self, text):
         """
@@ -88,31 +29,10 @@ class PDFExtractor:
             
         Mengembalikan:
             str: Teks yang sudah dibersihkan
-            
-        TODO:
-        - Menghapus spasi berlebih
-        - Memperbaiki pemisah baris
-        - Menghapus karakter khusus yang tidak perlu
-        - Normalisasi encoding
         """
-        pass
-    
-    def extractMetadata(self, pdfPath):
-        """
-        Ekstraksi metadata dari PDF
-        
-        Argumen:
-            pdfPath (str): Path ke file PDF
-            
-        Mengembalikan:
-            dict: Metadata PDF
-            
-        TODO:
-        - Ekstrak author, judul, tanggal pembuatan
-        - Ekstrak jumlah halaman
-        - Informasi ukuran file
-        """
-        pass
+        regex = RegexExtractor()    
+        full_text = regex.cleanseTextN(text)
+        return full_text
 
     # Versi mahesa
     def PDFtoText(self, pdfPath):
@@ -136,15 +56,13 @@ class PDFExtractor:
                     if page_text:
                         cleaned_text = page_text.strip()
                         full_text += cleaned_text + "\n"
-        except pypdf.errors.PdfReadError: # Error class juga disesuaikan
+        except pypdf.errors.PdfReadError:
             print(f"Error: Gagal membaca file PDF {pdfPath}. Mungkin terenkripsi atau rusak.")
             return ""
         except Exception as e:
             print(f"Terjadi error tak terduga saat memproses {pdfPath}: {e}")
             return ""
-        regex = RegexExtractor()
-        full_text = regex.cleanseTextN(full_text)
-        return full_text
+        return full_text.strip()
     
 
     def PDFExtractForMatch(self, pdfPath):
@@ -156,18 +74,61 @@ class PDFExtractor:
         result = regex.cleanseText(self.PDFtoText(pdfPath))
         return result
 
-# Tester
-def main():
-        """Main function untuk debugging dan testing"""
-        print("=== PDF Extractor Debug Mode ===\n")
-        
-        # Inisialisasi extractor
-        extractor = PDFExtractor()
-        
-        output = extractor.PDFExtractForMatch(r"C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\src\archive\data\data\ENGINEERING\10030015.pdf")
-        print(output)
-if __name__ == "__main__":
-        main()
 
 
+# def main():
+#     print("=== PDF Extractor Test ===\n")
 
+#     # Inisialisasi extractor
+#     extractor = PDFExtractor()
+#     regex_cleaner = RegexExtractor() # Mungkin tidak perlu inisialisasi di sini jika sudah di PDFExtractor
+    
+#     # Path ke file PDF yang akan diuji
+#     # Pastikan ini benar-benar sesuai dengan lokasi file Anda
+#     # Menggunakan Path dari pathlib untuk penanganan path yang lebih robust
+#     pdf_file_path = Path("C:/Users/Mahesa/OneDrive/ITB/Coding/College/Academic/IF/Smt-4/Strategi Algoritma/Tubes/Tubes 3/Tubes3_lukasbelomtidur/src/archive/data/data/ACCOUNTANT/10554236.pdf")
+
+#     # --- Test PDFtoText (ekstraksi mentah dengan newline antar halaman) ---
+#     print("--- Testing PDFtoText ---")
+#     extracted_raw_text = extractor.PDFtoText(str(pdf_file_path)) # Pastikan pass string path
+#     if extracted_raw_text:
+#         print("\n[SUCCESS] Teks mentah (dengan newline) berhasil diekstrak:")
+#         print("--------------------------------------------------")
+#         print(extracted_raw_text[:500]) # Tampilkan 500 karakter pertama
+#         print("...")
+#         print(f"Total karakter: {len(extracted_raw_text)}")
+#         print("--------------------------------------------------")
+#     else:
+#         print("[FAILED] Gagal mengekstrak teks menggunakan PDFtoText.")
+
+#     # --- Test cleanText (membersihkan teks menggunakan RegexExtractor.cleanseTextN) ---
+#     print("\n--- Testing cleanText (via RegexExtractor.cleanseTextN) ---")
+#     if extracted_raw_text:
+#         cleaned_text_n = extractor.cleanText(extracted_raw_text)
+#         print("\n[SUCCESS] Teks dibersihkan (dengan newline antar halaman) menggunakan cleanText:")
+#         print("--------------------------------------------------")
+#         print(cleaned_text_n[:500]) # Tampilkan 500 karakter pertama
+#         print("...")
+#         print(f"Total karakter setelah cleanText: {len(cleaned_text_n)}")
+#         print("--------------------------------------------------")
+#     else:
+#         print("[SKIP] cleanText test skipped because PDFtoText failed.")
+
+#     # --- Test PDFExtractForMatch (ekstraksi teks tanpa newline untuk matching) ---
+#     print("\n--- Testing PDFExtractForMatch (via RegexExtractor.cleanseText) ---")
+#     extracted_text_for_match = extractor.PDFExtractForMatch(str(pdf_file_path)) # Pastikan pass string path
+#     if extracted_text_for_match:
+#         print("\n[SUCCESS] Teks diekstrak dan diratakan (tanpa newline) untuk matching:")
+#         print("--------------------------------------------------")
+#         print(extracted_text_for_match[:500]) # Tampilkan 500 karakter pertama
+#         print("...")
+#         print(f"Total karakter setelah PDFExtractForMatch: {len(extracted_text_for_match)}")
+#         print(f"Apakah ada newline di 500 karakter pertama? {'\\n' in extracted_text_for_match[:500]}")
+#         print("--------------------------------------------------")
+#     else:
+#         print("[FAILED] Gagal mengekstrak teks menggunakan PDFExtractForMatch.")
+
+#     print("\n=== Test Selesai ===\n")
+
+# if __name__ == "__main__":
+#     main()
