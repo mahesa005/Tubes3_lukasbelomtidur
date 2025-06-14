@@ -1,86 +1,76 @@
-"""
-Implementasi Algoritma Boyer-Moore
-Tujuan: Pencocokan string secara efisien menggunakan algoritma Boyer-Moore
-"""
-
 class BoyerMoore:
-    """
-    Implementasi algoritma pencocokan pola Boyer-Moore
-
-    TODO:
-    - Implementasi aturan karakter buruk (bad character rule)
-    - Implementasi aturan sufiks baik (good suffix rule)
-    - Membuat fungsi pra-pemrosesan
-    - Implementasi fungsi pencarian utama
-    """
-
     def __init__(self):
-        """Inisialisasi pencocok Boyer-Moore"""
-        pass
+        self.bad_char = {}
+        self.good_suffix = []
 
     def preprocessBadCharacter(self, pattern):
-        """
-        Pra-pemrosesan pola untuk aturan karakter buruk
-
-        Argumen:
-            pattern (str): Pola yang akan dicari
-
-        Return:
-            dict: Tabel karakter buruk
-
-        TODO:
-        - Membuat tabel karakter buruk
-        - Menangani sensitivitas huruf besar/kecil
-        """
-        pass
+        bad = {}
+        m = len(pattern)
+        for i in range(m):
+            bad[pattern[i]] = i  # simpan posisi terakhir kemunculan
+        return bad
 
     def preprocessGoodSuffix(self, pattern):
-        """
-        Pra-pemrosesan pola untuk aturan sufiks baik
+        m = len(pattern)
+        good = [0] * (m + 1)
+        border = [0] * (m + 1)
+        
+        # langkah 1 hitung border dari suffix
+        i = m
+        j = m + 1
+        border[i] = j
+        while i > 0:
+            while j <= m and pattern[i-1] != pattern[j-1]:
+                if good[j] == 0:
+                    good[j] = j - i
+                j = border[j]
+            i -= 1
+            j -= 1
+            border[i] = j
 
-        Argumen:
-            pattern (str): Pola yang akan dicari
-
-        Return:
-            list: Tabel sufiks baik
-
-        TODO:
-        - Implementasi pra-pemrosesan sufiks baik
-        - Menghitung array border
-        """
-        pass
+        # langkah 2 isi good untuk prefix
+        j = border[0]
+        for i in range(m + 1):
+            if good[i] == 0:
+                good[i] = j
+            if i == j:
+                j = border[j]
+        return good
 
     def search(self, text, pattern, caseSensitive=True):
-        """
-        Mencari pola dalam teks menggunakan algoritma Boyer-Moore
-
-        Argumen:
-            text (str): Teks yang akan dicari
-            pattern (str): Pola yang akan dicari
-            caseSensitive (bool): Apakah pencarian sensitif huruf besar/kecil
-
-        Return:
-            list: Daftar posisi awal di mana pola ditemukan
-
-        TODO:
-        - Implementasi pencarian utama Boyer-Moore
-        - Menggunakan aturan karakter buruk dan sufiks baik
-        - Menangani sensitivitas huruf besar/kecil
-        - Mengembalikan semua posisi kemunculan
-        """
-        pass
+        if not caseSensitive:
+            text = text.lower()
+            pattern = pattern.lower()
+        n = len(text)
+        m = len(pattern)
+        if m == 0:
+            return []
+        # pra pemrosesan
+        bad = self.preprocessBadCharacter(pattern)
+        good = self.preprocessGoodSuffix(pattern)
+        # pencarian utama
+        occurrences = []
+        s = 0
+        while s <= n - m:
+            j = m - 1
+            while j >= 0 and pattern[j] == text[s+j]:
+                j -= 1
+            if j < 0:
+                occurrences.append(s)
+                s += good[0]
+            else:
+                char_shift = j - bad.get(text[s+j], -1)
+                suffix_shift = good[j+1]
+                s += max(char_shift, suffix_shift)
+        return occurrences
 
     def countOccurrences(self, text, pattern, caseSensitive=True):
-        """
-        Menghitung total kemunculan pola dalam teks
+        return len(self.search(text, pattern, caseSensitive))
 
-        Argumen:
-            text (str): Teks yang akan dicari
-            pattern (str): Pola yang akan dicari
-            caseSensitive (bool): Apakah pencarian sensitif huruf besar/kecil
-
-        Return:
-            int: Jumlah kemunculan
-        """
-        occurrences = self.search(text, pattern, caseSensitive)
-        return len(occurrences)
+# coba
+if __name__ == '__main__':
+    bm = BoyerMoore()
+    text = "dadasdihawidhalukasbelomtidurhdiwhdia"
+    pattern = "lukasbelomtidur"
+    print("Matches at:", bm.search(text, pattern))
+    print("Count:", bm.countOccurrences(text, pattern))
