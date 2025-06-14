@@ -71,12 +71,20 @@ class LevenshteinDistance:
 
         Mengembalikan:
             float: Rasio kemiripan (0.0 sampai 1.0)
-
-        TODO:
-        - Hitung kemiripan berdasarkan jarak Levenshtein
-        - Normalisasi ke rentang 0-1
         """
-        pass
+        if not str1 and not str2:
+            return 1.0
+            
+        max_len = max(len(str1), len(str2))
+        if max_len == 0: 
+            return 1.0 
+        
+        LD = self.calculate(str1, str2)
+
+        sim_ratio = 1- LD/max_len
+        
+        return sim_ratio
+        
 
     def findBestMatches(self, target, candidates, threshold=0.7, maxResults=10):
         """
@@ -97,16 +105,102 @@ class LevenshteinDistance:
         - Urutkan berdasarkan skor kemiripan
         - Kembalikan hasil teratas
         """
-        pass
+        results = []
+        for candidate in candidates:
+            sim_ratio = self.similarity(target, candidate)
+            if sim_ratio >= threshold:
+                result = (candidate, sim_ratio)
+                results.append(result)
+        # sort results
+        results.sort(key=lambda x: x[1], reverse=True)
 
-# def main():
-#     print("=== Levenshtein Distance Calculator Debug Mode ===\n")
-    
-#     ld_calculator = LevenshteinDistance()
-    
-#     # Test cases untuk calculate()
-#     print("--- Testing calculate() ---")
-#     print(ld_calculator.calculate("anjig", "mamalu"))
+        return results[:maxResults]
 
-# if __name__ == "__main__":
-#     main()
+def main():
+    print("=== Levenshtein Distance Module Test Suite ===\n")
+    
+    ld_calculator = LevenshteinDistance()
+    
+    # --- Test calculate() ---
+    print("--- Testing calculate() (Levenshtein Distance) ---")
+    test_cases_calculate = [
+        ("kitten", "sitting", 3),
+        ("saturday", "sunday", 3),
+        ("flaw", "lawn", 2),
+        ("hello", "hello", 0),
+        ("apple", "aple", 1),
+        ("book", "back", 2),
+        ("", "abc", 3),
+        ("xyz", "", 3),
+        ("", "", 0),
+        ("a", "b", 1),
+        ("abc", "axbyc", 2),
+        ("algorithm", "altruistic", 6)
+    ]
+
+    for s1, s2, expected_dist in test_cases_calculate:
+        actual_dist = ld_calculator.calculate(s1, s2)
+        status = "PASSED" if actual_dist == expected_dist else f"FAILED (Expected: {expected_dist}, Got: {actual_dist})"
+        print(f"'{s1}' vs '{s2}' -> Distance: {actual_dist} ({status})")
+    
+    # --- Test similarity() ---
+    print("\n--- Testing similarity() (Similarity Ratio 0.0-1.0) ---")
+    test_cases_similarity = [
+        ("kitten", "sitting", 0.5714),  # Jarak 3, max_len 7 -> (1 - 3/7) = 0.5714
+        ("saturday", "sunday", 0.6250), # Jarak 3, max_len 8 -> (1 - 3/8) = 0.625
+        ("apple", "aple", 0.8000),      # Jarak 1, max_len 5 -> (1 - 1/5) = 0.8
+        ("hello", "hello", 1.0000),     # Jarak 0, max_len 5 -> (1 - 0/5) = 1.0
+        ("", "abc", 0.0000),            # Jarak 3, max_len 3 -> (1 - 3/3) = 0.0
+        ("abc", "", 0.0000),            # Jarak 3, max_len 3 -> (1 - 3/3) = 0.0
+        ("", "", 1.0000),               # Jarak 0, max_len 0 -> (penanganan khusus) 1.0
+        ("python", "pyhon", 0.8333)     # Jarak 1, max_len 6 -> (1 - 1/6) = 0.8333
+    ]
+
+    for s1, s2, expected_sim in test_cases_similarity:
+        actual_sim = ld_calculator.similarity(s1, s2)
+        # Menggunakan abs() dan toleransi kecil untuk membandingkan float
+        status = "PASSED" if abs(actual_sim - expected_sim) < 0.0001 else f"FAILED (Expected: {expected_sim:.4f}, Got: {actual_sim:.4f})"
+        print(f"'{s1}' vs '{s2}' -> Similarity Ratio: {actual_sim:.4f} ({status})")
+
+    # --- Test findBestMatches() ---
+    print("\n--- Testing findBestMatches() ---")
+    target_word_1 = "programing" # typo dari programming
+    candidate_words_1 = ["programming", "programer", "java", "coding", "python", "software"]
+    
+    print(f"\nTarget: '{target_word_1}'")
+    print(f"Candidates: {candidate_words_1}")
+
+    # Test dengan threshold default (0.7) dan maxResults default (10)
+    print("\nBest Matches (threshold=0.7, maxResults=10):")
+    best_matches_1 = ld_calculator.findBestMatches(target_word_1, candidate_words_1)
+    if best_matches_1:
+        for match, score in best_matches_1:
+            print(f"  - '{match}': {score:.2f}%")
+    else:
+        print("  No matches found above the threshold.")
+
+    # Test dengan threshold yang lebih ketat (misal 0.8) dan maxResults lebih kecil
+    print("\nBest Matches (threshold=0.8, maxResults=2):")
+    best_matches_2 = ld_calculator.findBestMatches(target_word_1, candidate_words_1, threshold=0.8, maxResults=2)
+    if best_matches_2:
+        for match, score in best_matches_2:
+            print(f"  - '{match}': {score:.2f}%")
+    else:
+        print("  No matches found above the threshold.")
+
+    # Test dengan target dan kandidat yang berbeda
+    target_word_2 = "designer"
+    candidate_words_2 = ["design", "desainer", "graphic designer", "desire", "drawing"]
+    print(f"\nTarget: '{target_word_2}'")
+    print(f"Candidates: {candidate_words_2}")
+    
+    print("\nBest Matches (threshold=0.6, maxResults=5):")
+    best_matches_3 = ld_calculator.findBestMatches(target_word_2, candidate_words_2, threshold=0.6, maxResults=5)
+    if best_matches_3:
+        for match, score in best_matches_3:
+            print(f"  - '{match}': {score:.2f}%")
+    else:
+        print("  No matches found above the threshold.")
+
+if __name__ == "__main__":
+    main()
