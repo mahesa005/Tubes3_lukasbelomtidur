@@ -67,6 +67,8 @@ class KnuthMorrisPratt:
         - Menangani sensitivitas huruf besar/kecil
         - Mengembalikan semua posisi kemunculan
         """
+        if not pattern:
+            return []
         if not caseSensitive: # kalo mau disamain huruf besar kecilnya, lowerin semua
             text = text.lower() 
             pattern = pattern.lower()
@@ -108,3 +110,67 @@ class KnuthMorrisPratt:
         for pattern in patterns:
             results[pattern] = self.search(text, pattern, caseSensitive)
         return results
+    
+
+# from KnuthMorrisPratt import KnuthMorrisPratt
+
+# def main():
+#     print("=== Knuth-Morris-Pratt (KMP) Module Test Suite ===\n")
+#     kmp = KnuthMorrisPratt()
+
+#     # --- Test computeFailureFunction() ---
+#     print("--- Testing computeFailureFunction() (LPS Array) ---")
+#     test_cases_lps = [
+#         ("ABACABC", [0, 0, 1, 0, 1, 2, 0]),
+#         ("AAAA", [0, 1, 2, 3]),
+#         ("ABCDE", [0, 0, 0, 0, 0]),
+#         ("AABAACAABAA", [0, 1, 0, 1, 2, 0, 1, 2, 3, 4, 5]),
+#         ("", []),
+#         ("A", [0])
+#     ]
+#     for pattern, expected in test_cases_lps:
+#         actual = kmp.computeFailureFunction(pattern)
+#         status = "PASSED" if actual == expected else f"FAILED (Expected: {expected}, Got: {actual})"
+#         print(f"Pattern: '{pattern}' -> LPS: {actual} ({status})")
+
+#     # --- Test search() ---
+#     print("\n--- Testing search() (Pattern Matching) ---")
+#     test_cases_search = [
+#         ("ABABACABABC", "ABABC", [6]),
+#         ("ABCABABCABABC", "ABC", [0, 5, 10]),
+#         ("ABCABABCABABC", "CAB", [2, 7]),
+#         ("aaaaa", "aa", [0, 1, 2, 3]),
+#         ("hello world", "test", []),
+#         ("", "a", []),
+#         ("a", "", []),
+#         ("", "", []),
+#     ]
+#     for text, pattern, expected in test_cases_search:
+#         actual = kmp.search(text, pattern)
+#         status = "PASSED" if actual == expected else f"FAILED (Expected: {expected}, Got: {actual})"
+#         print(f"Text: '{text}' | Pattern: '{pattern}' -> Positions: {actual} ({status})")
+
+#     # --- Test search() with caseSensitive=False ---
+#     print("\n--- Testing search() (Case Insensitive) ---")
+#     test_cases_search_ci = [
+#         ("aBaBaCaBaBc", "ababc", [6]),
+#         ("HelloHELLOhello", "hello", [0, 5, 10]),
+#     ]
+#     for text, pattern, expected in test_cases_search_ci:
+#         actual = kmp.search(text, pattern, caseSensitive=False)
+#         status = "PASSED" if actual == expected else f"FAILED (Expected: {expected}, Got: {actual})"
+#         print(f"Text: '{text}' | Pattern: '{pattern}' (case-insensitive) -> Positions: {actual} ({status})")
+
+#     # --- Test searchMultiple() ---
+#     print("\n--- Testing searchMultiple() ---")
+#     text = "ABCABABCABABC"
+#     patterns = ["ABC", "CAB", "XYZ"]
+#     expected = {"ABC": [0, 5, 10], "CAB": [2, 7], "XYZ": []}
+#     actual = kmp.searchMultiple(text, patterns)
+#     status = "PASSED" if actual == expected else f"FAILED (Expected: {expected}, Got: {actual})"
+#     print(f"Text: '{text}' | Patterns: {patterns} -> Results: {actual} ({status})")
+
+#     print("\n=== All Tests Completed ===\n")
+
+# if __name__ == "__main__":
+#     main()

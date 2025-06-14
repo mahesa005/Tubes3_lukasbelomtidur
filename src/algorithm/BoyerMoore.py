@@ -66,11 +66,19 @@ class BoyerMoore:
 
     def countOccurrences(self, text, pattern, caseSensitive=True):
         return len(self.search(text, pattern, caseSensitive))
+    
+    # tambahan lukas, untuk mencari beberapa keyword sekaligus
+    def searchMultiple(self, text, patterns, caseSensitive=True) -> dict:
+        results = {}
+        for pattern in patterns:
+            results[pattern] = self.search(text, pattern, caseSensitive)
+        return results
 
 # coba
 if __name__ == '__main__':
     bm = BoyerMoore()
-    text = "dadasdihawidhalukasbelomtidurhdiwhdia"
-    pattern = "lukasbelomtidur"
-    print("Matches at:", bm.search(text, pattern))
-    print("Count:", bm.countOccurrences(text, pattern))
+    text = "dadasdihawidhalukasbelomtidurhdiwhdia lukasbelomtidur test lukasbelomtidur"
+    patterns = ["lukasbelomtidur", "test", "tidur", "notfound"]
+    results = bm.searchMultiple(text, patterns)
+    for pattern, positions in results.items():
+        print(f"Keyword: '{pattern}'  positions: {positions} (Count: {len(positions)})")
