@@ -16,4 +16,18 @@ class SummaryData:
         self.work_experience = work_experience if work_experience is not None else []
         self.education = education if education is not None else []
 
-    
+
+def print_summarycard(summarycard):
+    print("=== Summary Card ===")
+    if isinstance(summarycard, dict):
+        for key, val in summarycard.items():
+            print(f"{key}: {val}")
+    elif isinstance(summarycard, (list, tuple, set)):
+        for line in summarycard:
+            print(f"- {line}")
+    elif hasattr(summarycard, '__dict__'):
+        for key, val in vars(summarycard).items():
+            print(f"{key}: {val}")
+    else:
+        print(summarycard)
+    print()
