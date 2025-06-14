@@ -30,6 +30,7 @@ class LevenshteinDistance:
     def __init__(self):
         """Inisialisasi kalkulator Levenshtein"""
         pass
+    
 
     def calculate(self, str1, str2):
         """
@@ -92,7 +93,7 @@ class LevenshteinDistance:
         sim_ratio = 1- LD/max_len
         
         return sim_ratio
-        
+
 
     def findBestMatches(self, target, candidates, threshold=0.7, maxResults=10):
         """
@@ -118,6 +119,7 @@ class LevenshteinDistance:
 
         return results[:maxResults]
     
+
     def search(self, text, keyword, threshold=0.7, caseSensitive=True) -> list:
         if not caseSensitive:
             text = text.lower()  # lower text if not case sensitive
@@ -130,11 +132,58 @@ class LevenshteinDistance:
         result = self.findBestMatches(keyword, words, threshold)
         return result
     
+    
     def searchMultiple(self, text, keywords, threshold=0.7, caseSensitive=True) -> dict:
         results = {}
         for keyword in keywords:
             results[keyword] = self.search(text, keyword, threshold, caseSensitive)
         return results
+    
+
+    def count_every_word_occurrence(self, text, keywords, threshold=0.7, caseSensitive=True) -> dict:
+        """
+        Menghitung setiap kemunculan fuzzy dari kata kunci dalam teks.
+
+        Argumen:
+            text (str): Teks input yang akan dicari.
+            keywords (list): Daftar kata kunci yang akan dihitung.
+            threshold (float): Ambang minimum kemiripan untuk dipertimbangkan sebagai kecocokan.
+            caseSensitive (bool): Jika True, pencocokan akan peka huruf besar/kecil.
+
+        Mengembalikan:
+            dict: Sebuah kamus di mana kunci adalah kata kunci dan nilai adalah 
+                  jumlah kemunculan fuzzy dalam teks.
+        """
+        occurrence_counts = {keyword: 0 for keyword in keywords}
+        
+        regex = RegexExtractor()
+        # Preprocess the text once
+        processed_text = regex.seperatePunctuations(text)
+        words = processed_text.split()
+
+        # Adjust keywords and words if not case sensitive
+        if not caseSensitive:
+            keywords_lower = [k.lower() for k in keywords]
+            words_lower = [w.lower() for w in words]
+        else:
+            keywords_lower = keywords # Use original keywords for comparison
+            words_lower = words      # Use original words for comparison
+
+
+        for i, text_word_original in enumerate(words):
+            text_word = words_lower[i] # Use lowercased word for comparison if not case sensitive
+            
+            for j, keyword_original in enumerate(keywords):
+                keyword = keywords_lower[j] # Use lowercased keyword for comparison if not case sensitive
+
+                sim_ratio = self.similarity(keyword, text_word)
+                if sim_ratio >= threshold:
+                    occurrence_counts[keyword_original] += 1
+        
+        for keyword in keywords:
+            if occurrence_counts[keyword] == 0:
+                occurrence_counts.pop(keyword)  # Remove keywords with no occurrences
+        return occurrence_counts
         
 # def main():
 #     print("=== Levenshtein Distance Module Test Suite ===\n")
@@ -193,17 +242,17 @@ class LevenshteinDistance:
 #     best_matches_1 = ld_calculator.findBestMatches(target_word_1, candidate_words_1)
 #     if best_matches_1:
 #         for match, score in best_matches_1:
-#             print(f"  - '{match}': {score:.2f}%")
+#             print(f"   - '{match}': {score:.2f}") # Changed % to empty string, as it's already a percentage
 #     else:
-#         print("  No matches found above the threshold.")
+#         print("   No matches found above the threshold.")
 
 #     print("\nBest Matches (threshold=0.8, maxResults=2):")
 #     best_matches_2 = ld_calculator.findBestMatches(target_word_1, candidate_words_1, threshold=0.8, maxResults=2)
 #     if best_matches_2:
 #         for match, score in best_matches_2:
-#             print(f"  - '{match}': {score:.2f}%")
+#             print(f"   - '{match}': {score:.2f}")
 #     else:
-#         print("  No matches found above the threshold.")
+#         print("   No matches found above the threshold.")
 
 #     target_word_2 = "designer"
 #     candidate_words_2 = ["design", "desainer", "graphic designer", "desire", "drawing"]
@@ -214,9 +263,9 @@ class LevenshteinDistance:
 #     best_matches_3 = ld_calculator.findBestMatches(target_word_2, candidate_words_2, threshold=0.6, maxResults=5)
 #     if best_matches_3:
 #         for match, score in best_matches_3:
-#             print(f"  - '{match}': {score:.2f}%")
+#             print(f"   - '{match}': {score:.2f}")
 #     else:
-#         print("  No matches found above the threshold.")
+#         print("   No matches found above the threshold.")
 
 #     # --- Test search() ---
 #     print("\n--- Testing search() ---")
@@ -228,25 +277,25 @@ class LevenshteinDistance:
 #     results_pytton = ld_calculator.search(sample_cv_text, "pytton", threshold=0.7, caseSensitive=False)
 #     if results_pytton:
 #         for word, score in results_pytton:
-#             print(f"  Found: '{word}' (Score: {score:.2f}%)")
+#             print(f"   Found: '{word}' (Score: {score:.2f})")
 #     else:
-#         print("  No fuzzy matches found.")
+#         print("   No fuzzy matches found.")
 
 #     print("\nSearch for 'ReactJS' (case-sensitive, threshold 0.8):")
 #     results_reactjs = ld_calculator.search(sample_cv_text, "ReactJS", threshold=0.8, caseSensitive=True)
 #     if results_reactjs:
 #         for word, score in results_reactjs:
-#             print(f"  Found: '{word}' (Score: {score:.2f}%)")
+#             print(f"   Found: '{word}' (Score: {score:.2f})")
 #     else:
-#         print("  No fuzzy matches found.")
+#         print("   No fuzzy matches found.")
 
 #     print("\nSearch for 'Engineer' (case-insensitive, threshold 0.9):")
 #     results_engineer = ld_calculator.search(sample_cv_text, "Engineer", threshold=0.9, caseSensitive=False)
 #     if results_engineer:
 #         for word, score in results_engineer:
-#             print(f"  Found: '{word}' (Score: {score:.2f}%)")
+#             print(f"   Found: '{word}' (Score: {score:.2f})")
 #     else:
-#         print("  No fuzzy matches found.")
+#         print("   No fuzzy matches found.")
 
 #     # --- Test searchMultiple() ---
 #     print("\n--- Testing searchMultiple() ---")
@@ -259,16 +308,46 @@ class LevenshteinDistance:
 #         print(f"\nResults for '{keyword}':")
 #         if matches:
 #             for word, score in matches:
-#                 print(f"  - Found: '{word}' (Score: {score:.2f}%)")
+#                 print(f"   - Found: '{word}' (Score: {score:.2f})")
 #         else:
-#             print("  No fuzzy matches found for this keyword.")
+#             print("   No fuzzy matches found for this keyword.")
+    
+#     # --- Test count_every_word_occurrence() ---
+#     print("\n--- Testing count_every_word_occurrence() ---")
+#     sample_text_for_count = "Python programmer, a python enthusiast, and also codes in Cpp. I love python!"
+#     keywords_for_count = ["Python", "programmer", "cpp", "java"]
+
+#     print(f"\nSample Text: '{sample_text_for_count}'")
+#     print(f"Keywords to count: {keywords_for_count}")
+
+#     counts_case_sensitive = ld_calculator.count_every_word_occurrence(
+#         sample_text_for_count, keywords_for_count, threshold=0.8, caseSensitive=True
+#     )
+#     print("\nCounts (Case Sensitive, Threshold 0.8):")
+#     for keyword, count in counts_case_sensitive.items():
+#         print(f"  '{keyword}': {count} occurrences")
+
+#     counts_case_insensitive = ld_calculator.count_every_word_occurrence(
+#         sample_text_for_count, keywords_for_count, threshold=0.8, caseSensitive=False
+#     )
+#     print("\nCounts (Case Insensitive, Threshold 0.8):")
+#     for keyword, count in counts_case_insensitive.items():
+#         print(f"  '{keyword}': {count} occurrences")
+
+#     # Another example for count_every_word_occurrence
+#     sample_text_2 = "software development, developer, develop, developing, develop"
+#     keywords_2 = ["develop", "software"]
+#     counts_2 = ld_calculator.count_every_word_occurrence(
+#         sample_text_2, keywords_2, threshold=0.7, caseSensitive=False
+#     )
+#     print(f"\nSample Text 2: '{sample_text_2}'")
+#     print(f"Keywords to count 2: {keywords_2}")
+#     print("\nCounts (Case Insensitive, Threshold 0.7):")
+#     for keyword, count in counts_2.items():
+#         print(f"  '{keyword}': {count} occurrences")
+
 
 #     print("\n=== All Tests Completed ===\n")
 
 # if __name__ == "__main__":
 #     main()
-
-        
-        
-
-
