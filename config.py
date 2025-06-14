@@ -5,8 +5,8 @@ from pathlib import Path
 DATABASE_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': '',
-    'database': 'ats_database',
+    'password': 'root',
+    'database': 'database_name    .\Tubes3_lukasbelomtidur\bin\run.bat',
     'port': 3306
 }
 
