@@ -98,12 +98,6 @@ class LevenshteinDistance:
 
         Mengembalikan:
             list: Daftar tuple (kandidat, skor_kemiripan)
-
-        TODO:
-        - Hitung kemiripan untuk semua kandidat
-        - Filter berdasarkan ambang batas
-        - Urutkan berdasarkan skor kemiripan
-        - Kembalikan hasil teratas
         """
         results = []
         for candidate in candidates:
