@@ -21,9 +21,9 @@ from src.models.SummaryCard import (
 from config import DATABASE_CONFIG
 
 def main():
-    cv = r'/Users/jonathankenanbudianto/Documents/coding/pyton/SEM4/tubesstima3/Tubes3_lukasbelomtidur/src/archive/data/data/CHEF/24673903.pdf '  # sesuaikan
+    cv = r'data/BUSINESS-DEVELOPMENT/12814706.pdf'  # sesuaikan
 
-    db = DatabaseConnection()
+    db = DatabaseConnection()   
     db.connect()
     db.useDatabase(DATABASE_CONFIG['database'])
 
