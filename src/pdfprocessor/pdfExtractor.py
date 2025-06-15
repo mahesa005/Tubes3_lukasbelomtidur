@@ -9,6 +9,7 @@ from .regexExtractor import RegexExtractor
 import logging
 import os
 from pathlib import Path
+from src.pdfprocessor.regexExtractor import RegexExtractor
 
 class PDFExtractor:
     """
