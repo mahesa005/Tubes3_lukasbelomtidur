@@ -211,9 +211,8 @@ class RegexExtractor:
             
             if any(attr in skill.lower() for attr in personal_attrs):
                 return ""
-            
-            # Skip very generic words
-            generic_words = ['and', 'or', 'the', 'in', 'on', 'at', 'to', 'for', 'with', 'as', 'a']
+              # Skip very generic words
+            generic_words = ['and', 'or', 'the', 'in', 'on', 'at', 'to', 'for', 'with', 'as', 'a', 'point', 'intermediate', 'advanced']
             if skill.lower() in generic_words:
                 return ""
             
@@ -236,8 +235,7 @@ class RegexExtractor:
                     return "Microsoft Access"
                 else:
                     return skill.title()
-            
-            # Handle standalone Office applications
+              # Handle standalone Office applications
             if skill.lower() == 'word':
                 return "Microsoft Word"
             elif skill.lower() == 'excel':
@@ -248,6 +246,12 @@ class RegexExtractor:
                 return "Microsoft Outlook"
             elif skill.lower() == 'access':
                 return "Microsoft Access"
+            
+            # Handle QuickBooks variations
+            if 'quickbooks' in skill.lower() or (skill.lower() == 'quick' or skill.lower() == 'books'):
+                return "QuickBooks"
+            elif skill.lower() == 'enterprise' and 'quickbooks' in text.lower():
+                return "QuickBooks Enterprise"
             
             # Handle level + skill combinations properly
             if any(level in skill.lower() for level in ['advanced', 'intermediate', 'basic']):
@@ -399,8 +403,7 @@ class RegexExtractor:
             
             # Limit to 7 most relevant work experiences
             work_experience = work_experience[:7]
-        
-        # Process Skills into clean list
+          # Process Skills into clean list
         skills = []
         if skills_raw:
             # Handle special case where skill header is concatenated with first skill
@@ -408,8 +411,25 @@ class RegexExtractor:
                 # Find where the actual skills start after the header
                 skills_raw = re.sub(r'skill\s*highlights?', '', skills_raw, flags=re.IGNORECASE)
             
-            # Process normally found skills
-            skill_parts = re.split(r'(?=[A-Z][a-z])', skills_raw)
+            # Pre-process to identify and protect compound skills
+            compound_skills = [
+                'QuickBooks Enterprise', 'Accounts Receivable', 'Accounts Payable',
+                'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint', 
+                'Microsoft Outlook', 'Microsoft Access', 'Customer Service',
+                'Data Entry', 'Credit Checks', 'Sales Reports'
+            ]
+            
+            protected_skills = []
+            remaining_text = skills_raw
+            
+            for compound in compound_skills:
+                if compound.lower() in remaining_text.lower():
+                    protected_skills.append(compound)
+                    # Remove it from remaining text to avoid duplicate processing
+                    remaining_text = re.sub(re.escape(compound), '', remaining_text, flags=re.IGNORECASE)
+            
+            # Process remaining skills normally
+            skill_parts = re.split(r'(?=[A-Z][a-z])', remaining_text)
             
             for part in skill_parts:
                 part = part.strip()
@@ -425,6 +445,11 @@ class RegexExtractor:
                                 formatted_skill = format_skill_name(sub_part)
                                 if formatted_skill and formatted_skill not in skills:
                                     skills.append(formatted_skill)
+            
+            # Add the protected compound skills
+            for protected in protected_skills:
+                if protected not in skills:
+                    skills.append(protected)
         
         # If no skills found, check work experience for skills section
         if not skills and work_experience:
@@ -477,8 +502,7 @@ class RegexExtractor:
                 has_edu_keyword = any(keyword in text_lower for keyword in education_keywords)
                 if not has_edu_keyword:
                     return False
-                
-                # Skip if it's mostly a skills list
+                  # Skip if it's mostly a skills list
                 skills_indicators = ['skills', 'proficient', 'expertise', 'competencies']
                 if any(indicator in text_lower for indicator in skills_indicators):
                     # Check if it's followed by a long list (typical skills section)
@@ -495,6 +519,31 @@ class RegexExtractor:
                     skills_pos = text.lower().find('skills')
                     if skills_pos > 20:  # Keep the main education info before skills
                         text = text[:skills_pos].strip()
+                
+                # Handle year and institution patterns better
+                # Look for patterns like ": 2008 Martinez Adult Education"
+                if ':' in text and re.search(r':\s*\d{4}', text):
+                    # Split on the colon and reconstruct properly
+                    parts = text.split(':')
+                    if len(parts) >= 2:
+                        program_part = parts[0].strip()
+                        year_institution_part = parts[1].strip()
+                        
+                        # Extract year
+                        year_match = re.search(r'\d{4}', year_institution_part)
+                        if year_match:
+                            year = year_match.group()
+                            # Get institution part after year
+                            year_end = year_match.end()
+                            institution_part = year_institution_part[year_end:].strip()
+                            
+                            # Clean up institution name
+                            if institution_part:
+                                # Remove extra symbols and clean
+                                institution_part = re.sub(r'^[^\w]*|[^\w]*$', '', institution_part)
+                                text = f"{program_part} ({year}) - {institution_part}"
+                            else:
+                                text = f"{program_part} ({year})"
                 
                 # Remove excessive comma-separated lists (likely skills)
                 parts = text.split(',')
@@ -515,20 +564,21 @@ class RegexExtractor:
                 # Clean up formatting
                 text = re.sub(r'\s+', ' ', text).strip()
                 text = text.replace('ï1⁄4​', '')
+                text = text.replace('ï¼​', '')
                 
                 # Limit length to keep it readable
                 if len(text) > 150:
                     text = text[:150] + '...'
                 
                 return text
-            
-            # Method 1: Look for specific degree patterns
+              # Method 1: Look for specific degree patterns
             degree_patterns = [
                 r'Bachelor\s+of\s+[A-Za-z\s]+(?:\s+[A-Za-z\s]*(?:University|College|Institute))?[^,]*',
                 r'Master\s+of\s+[A-Za-z\s]+(?:\s+[A-Za-z\s]*(?:University|College|Institute))?[^,]*',
                 r'PhD\s+in\s+[A-Za-z\s]+(?:\s+[A-Za-z\s]*(?:University|College|Institute))?[^,]*',
-                r'[A-Z][a-z]+\s+(?:Certificate|Diploma)\s+Program[^,]*',
-                r'Associate\s+(?:of|in)\s+[A-Za-z\s]+[^,]*'
+                r'[A-Za-z\s]+\s+(?:Certificate|Diploma)\s+Program[^,]*',
+                r'Associate\s+(?:of|in)\s+[A-Za-z\s]+[^,]*',
+                r'[A-Za-z\s]+\s+Specialist\s+Certificate\s+Program[^,]*'
             ]
             
             for pattern in degree_patterns:
