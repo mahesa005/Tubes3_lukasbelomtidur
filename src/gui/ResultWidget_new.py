@@ -35,10 +35,11 @@ class ResultWidget(QWidget):
         for result in results:
             card = self.createResultCard(result)
             self.resultsLayout.addWidget(card)
-              # Tampilkan informasi pencarian
+            
+        # Tampilkan informasi pencarian
         if isinstance(searchTime, dict):
             processing_time = searchTime.get('processing_time_ms', 0)
-            total_matches = searchTime.get('total_matches_found', 0)
+            total_matches = searchTime.get('total_matches', 0)
             info_text = f"Ditemukan {total_matches} hasil dalam {processing_time:.1f}ms"
         else:
             info_text = f"Pencarian selesai dalam {searchTime.get('time_ms', 0)}ms"
@@ -80,32 +81,14 @@ class ResultWidget(QWidget):
         cvButton = QPushButton("Lihat CV")
         
         summaryButton.setMaximumWidth(100)
-        cvButton.setMaximumWidth(100)        # Connect buttons dengan data yang benar
+        cvButton.setMaximumWidth(100)
+
+        # Connect buttons dengan data yang benar
         application_id = result.get('application_id')
         cv_path = result.get('cv_path', '')
         
-        # Create proper signal connections dengan closure
-        def create_summary_handler(app_id):
-            def handler():
-                print(f"🔔 Ringkasan button clicked for application_id: {app_id}")
-                if app_id is not None:
-                    self.resultSelected.emit(app_id)
-                else:
-                    print("❌ application_id is None, cannot emit signal")
-            return handler
-        
-        def create_cv_handler(path):
-            def handler():
-                print(f"🔔 CV button clicked for path: {path}")
-                self.viewCVRequested.emit(path)
-            return handler
-        
-        # Connect buttons dengan proper handlers
-        summaryButton.clicked.connect(create_summary_handler(application_id))
-        cvButton.clicked.connect(create_cv_handler(cv_path))
-        
-        # Debug print untuk memastikan data terkirim
-        print(f"🔗 ResultWidget: Creating button for application_id={application_id}, cv_path={cv_path}")
+        summaryButton.clicked.connect(lambda: self.resultSelected.emit(application_id) if application_id else None)
+        cvButton.clicked.connect(lambda: self.viewCVRequested.emit(cv_path))
 
         buttonLayout.addWidget(summaryButton)
         buttonLayout.addWidget(cvButton)

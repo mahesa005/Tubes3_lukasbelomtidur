@@ -27,6 +27,10 @@ class SearchWidget(QWidget):
         self.topMatchesSpin.setRange(1, 9999)  # Tingkatkan batas maksimal ke 9999
         self.topMatchesSpin.setValue(5)
         self.topMatchesSpin.setSuffix(" hasil")
+        
+        # Tambahkan opsi untuk "Semua hasil"
+        self.topMatchesSpin.setMaximum(9999)
+        self.topMatchesSpin.setMinimum(1)
 
         self.searchButton = QPushButton("Cari")
 

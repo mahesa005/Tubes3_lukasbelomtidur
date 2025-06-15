@@ -6,7 +6,7 @@ DATABASE_CONFIG = {
     'host': 'localhost',
     'user': 'root',
     'password': 'root',
-    'database': 'ats_cv_matcher',
+    'database': 'ats_database',
     'port': 3306
 }
 

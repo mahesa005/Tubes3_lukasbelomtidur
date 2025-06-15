@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QMessageBox
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from .SearchWidget import SearchWidget
@@ -9,7 +5,8 @@ from .ResultWidget import ResultWidget
 from .SummaryWidget import SummaryWidget
 from .CVViewer import CVViewer
 from .styles import applyTheme
-from src.services.ATSService import ATSService
+from ..services.ATSService import ATSService
+import sys
 
 
 class SearchWorker(QThread):
@@ -98,7 +95,7 @@ class MainWindow(QMainWindow):
             self.resultWidget.updateResults(results, metadata)
             
             processing_time = metadata.get('processing_time_ms', 0)
-            total_matches = metadata.get('total_matches_found', 0)
+            total_matches = metadata.get('total_matches', 0)
             self.statusBar().showMessage(
                 f"Pencarian selesai: {total_matches} hasil ditemukan dalam {processing_time:.1f}ms"
             )
@@ -113,12 +110,10 @@ class MainWindow(QMainWindow):
     def onResultSelected(self, applicationId):
         """Handler ketika hasil dipilih untuk melihat ringkasan"""
         try:
-            print(f"🔄 MainWindow: Result selected with application_id: {applicationId}")
             self.statusBar().showMessage("Mengambil ringkasan...")
             
             # Gunakan application_id untuk mendapatkan summary
             summary_data = self.atsService.getSummary(application_id=applicationId)
-            print(f"📋 MainWindow: Got summary data: {summary_data}")
             
             # Convert SummaryData ke format yang diharapkan widget
             summary_dict = {
@@ -131,15 +126,10 @@ class MainWindow(QMainWindow):
                 'cv_path': summary_data.cv_path
             }
             
-            print(f"📄 MainWindow: Converted to dict: {summary_dict}")
-            
             self.summaryWidget.updateSummary(summary_dict)
             self.statusBar().showMessage("Ringkasan berhasil dimuat")
             
         except Exception as e:
-            print(f"❌ MainWindow: Error in onResultSelected: {e}")
-            import traceback
-            traceback.print_exc()
             QMessageBox.warning(self, "Error", f"Gagal memuat ringkasan: {e}")
             self.statusBar().showMessage("Error memuat ringkasan")
 

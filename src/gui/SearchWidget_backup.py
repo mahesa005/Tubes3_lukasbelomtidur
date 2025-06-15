@@ -17,9 +17,7 @@ class SearchWidget(QWidget):
 
         self.kmpRadio = QRadioButton("KMP")
         self.bmRadio = QRadioButton("Boyer-Moore")
-        self.kmpRadio.setChecked(True)
-
-        algorithmLayout = QHBoxLayout()
+        self.kmpRadio.setChecked(True)        algorithmLayout = QHBoxLayout()
         algorithmLayout.addWidget(self.kmpRadio)
         algorithmLayout.addWidget(self.bmRadio)
 

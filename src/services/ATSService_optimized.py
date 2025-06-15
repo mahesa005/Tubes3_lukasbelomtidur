@@ -2,6 +2,7 @@
 """
 ATS Service - Service layer untuk integrasi semua komponen
 Tujuan: Mengintegrasikan PDF extraction, pattern matching, dan database operations
+OPTIMIZED VERSION - dengan caching dan parallel processing
 """
 
 import os
@@ -126,7 +127,8 @@ class ATSService:
                     }
                 }
             
-            return None            
+            return None
+            
         except Exception as e:
             self.logger.error(f"Error processing {pdf_path}: {e}")
             return None
@@ -147,123 +149,61 @@ class ATSService:
         results = []
         db_connected = False
         
-        try:            # Dapatkan semua file PDF dari data directory
+        try:
+            # Dapatkan semua file PDF dari data directory
             pdf_files = self.fileManager.listPDFFiles(str(DATA_DIR))
-            self.logger.info(f"Found {len(pdf_files)} PDF files total")
-            self.logger.info(f"Target: {topMatches} matches")
+            self.logger.info(f"Processing {len(pdf_files)} PDF files")
             
             # Buka koneksi database sekali untuk semua operasi
             db_connected = self.db.connect()
             if not db_connected:
-                self.logger.warning("Database connection failed, proceeding without database lookup")            # Proses PDF files secara paralel
+                self.logger.warning("Database connection failed, proceeding without database lookup")
+            
+            # Proses PDF files secara paralel dengan batas maksimal matches
             matches_found = []
-            max_workers = min(6, os.cpu_count() or 1)
-            batch_size = 50
-            processed_count = 0
-              # Tentukan strategi pemrosesan berdasarkan permintaan user
-            if topMatches <= 10:
-                # Untuk permintaan kecil, gunakan early termination setelah minimum file
-                min_files_to_process = min(500, len(pdf_files))
-                enable_early_termination = True
-                self.logger.info(f"Small request ({topMatches} results): Will process minimum {min_files_to_process} files with early termination")
-            elif topMatches >= 9999:
-                # Untuk permintaan "semua hasil", proses semua file tanpa batasan
-                min_files_to_process = len(pdf_files)
-                enable_early_termination = False
-                self.logger.info(f"All results request (topMatches >= 9999): Will process ALL {len(pdf_files)} files")
-            else:
-                # Untuk permintaan menengah/besar, proses semua file
-                min_files_to_process = len(pdf_files)
-                enable_early_termination = False
-                self.logger.info(f"Large request ({topMatches} results): Will process ALL {len(pdf_files)} files")
+            max_workers = min(4, os.cpu_count() or 1)  # Gunakan maksimal 4 thread
             
-            for i in range(0, len(pdf_files), batch_size):
-                # Early termination hanya untuk permintaan kecil
-                if enable_early_termination and len(matches_found) >= topMatches and processed_count >= min_files_to_process:
-                    self.logger.info(f"Early termination: Found {len(matches_found)} matches after processing {processed_count} files")
-                    break
-                    
-                batch = pdf_files[i:i + batch_size]
-                self.logger.info(f"Processing batch {i//batch_size + 1}: {len(batch)} files (Progress: {processed_count}/{len(pdf_files)})")
-            
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit batch tasks
-                    future_to_path = {
-                        executor.submit(self._process_single_pdf, pdf_path, keywords, algorithm): pdf_path
-                        for pdf_path in batch
-                    }
-                      # Collect results from this batch
-                    for future in as_completed(future_to_path):
-                        result = future.result()
-                        if result:
-                            matches_found.append(result)
-                        processed_count += 1
-                        
-                        # Early termination hanya untuk permintaan kecil
-                        if enable_early_termination and len(matches_found) >= topMatches and processed_count >= min_files_to_process:
-                            # Cancel remaining futures in this batch
-                            for f in future_to_path:
-                                if not f.done():
-                                    f.cancel()
-                            break
-            
-            self.logger.info(f"Found {len(matches_found)} matching PDFs")            # Batch query database untuk semua matching files
-            if db_connected and self.db.connection and matches_found:
-                cv_paths = []
-                for match in matches_found:
-                    absolute_path = match['cv_path']                    # Convert to relative path untuk database lookup
-                    try:
-                        relative_path = os.path.relpath(absolute_path)
-                        # Convert backslashes to forward slashes to match database format
-                        relative_path = relative_path.replace('\\', '/')
-                        # Debug: Log path conversion
-                        self.logger.debug(f"🔍 Path conversion: {absolute_path} -> {relative_path}")
-                        cv_paths.append(relative_path)
-                    except (ValueError, OSError):
-                        self.logger.debug(f"❌ Failed to convert path: {absolute_path}")
-                        cv_paths.append(absolute_path)  # Fallback
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit semua tasks
+                future_to_path = {
+                    executor.submit(self._process_single_pdf, pdf_path, keywords, algorithm): pdf_path
+                    for pdf_path in pdf_files
+                }
                 
+                # Collect results as they complete
+                for future in as_completed(future_to_path):
+                    if len(matches_found) >= topMatches * 3:  # Stop early when we have enough candidates
+                        # Cancel remaining futures
+                        for f in future_to_path:
+                            if not f.done():
+                                f.cancel()
+                        break
+                    
+                    result = future.result()
+                    if result:
+                        matches_found.append(result)
+            
+            self.logger.info(f"Found {len(matches_found)} matching PDFs")
+            
+            # Batch query database untuk semua matching files
+            if db_connected and self.db.connection and matches_found:
+                cv_paths = [match['cv_path'] for match in matches_found]
                 db_info = self._batch_get_cv_info(cv_paths)
-                self.logger.info(f"Database lookup: {len(db_info)} entries found for {len(cv_paths)} paths")
             else:
-                db_info = {}            # Build final results
+                db_info = {}
+            
+            # Build final results
             for match in matches_found:
                 pdf_path = match['cv_path']
-                  # Convert absolute path to relative path untuk database lookup
-                try:
-                    # Get relative path dari current working directory
-                    relative_path = os.path.relpath(pdf_path)
-                    # Convert backslashes to forward slashes to match database format
-                    relative_path = relative_path.replace('\\', '/')
-                except (ValueError, OSError):
-                    # Fallback jika relpath gagal
-                    relative_path = pdf_path
                 
                 # Dapatkan nama dari database atau fallback ke nama file
-                if relative_path in db_info:
-                    info = db_info[relative_path]
-                    full_name = f"{info['first_name']} {info['last_name']}".strip()
-                    application_id = info['application_id']
-                    lookup_path = relative_path  # Use relative path
-                elif pdf_path in db_info:
-                    # Fallback: try absolute path
+                if pdf_path in db_info:
                     info = db_info[pdf_path]
                     full_name = f"{info['first_name']} {info['last_name']}".strip()
                     application_id = info['application_id']
-                    lookup_path = pdf_path
                 else:
                     full_name = Path(pdf_path).stem
                     application_id = None
-                    lookup_path = pdf_path
-                  # Debug log untuk tracking
-                if application_id is not None:
-                    self.logger.info(f"✅ Match found: {full_name} (ID: {application_id}) -> {lookup_path}")
-                else:
-                    self.logger.warning(f"❌ No DB match: {Path(pdf_path).stem} -> {lookup_path}")
-                    # Additional debug untuk troubleshooting
-                    self.logger.debug(f"   Absolute: {pdf_path}")
-                    self.logger.debug(f"   Relative: {relative_path}")
-                    self.logger.debug(f"   In db_info keys: {lookup_path in db_info}")
                 
                 # Hitung match score
                 match_score = min(100, (match['total_matches'] / len(keywords)) * 100)
@@ -273,18 +213,13 @@ class ATSService:
                     'name': full_name,
                     'match_score': match_score,
                     'keywords': match['matched_keywords'],
-                    'cv_path': pdf_path,  # Keep original absolute path for file access
+                    'cv_path': pdf_path,
                     'total_matches': match['total_matches']
-                })            # Sort berdasarkan match score
-            results.sort(key=lambda x: x['match_score'], reverse=True)
-            total_matches_found = len(results)  # Total matches sebelum dipotong
+                })
             
-            # Jika topMatches >= 9999, kembalikan semua hasil
-            if topMatches >= 9999:
-                self.logger.info(f"Returning ALL {total_matches_found} results (topMatches >= 9999)")
-            else:
-                results = results[:topMatches]
-                self.logger.info(f"Total matching files: {total_matches_found}, Returning: {len(results)} results")
+            # Sort berdasarkan match score dan ambil top matches
+            results.sort(key=lambda x: x['match_score'], reverse=True)
+            results = results[:topMatches]
             
             # Save cache setelah selesai
             self._save_cache()
@@ -294,15 +229,11 @@ class ATSService:
             return {
                 'results': results,
                 'metadata': {
-                    'total_files_available': len(pdf_files),
-                    'total_processed': processed_count, 
-                    'total_matches_found': total_matches_found,  # Total yang match
-                    'total_returned': len(results),  # Total yang dikembalikan (limited by topMatches)
+                    'total_processed': len(pdf_files),
+                    'total_matches': len(results),
                     'algorithm': algorithm,
                     'keywords': keywords,
-                    'processing_time_ms': (end_time - start_time) * 1000,
-                    'early_termination': processed_count < len(pdf_files),
-                    'requested_matches': topMatches
+                    'processing_time_ms': (end_time - start_time) * 1000
                 }
             }
             
@@ -326,12 +257,13 @@ class ATSService:
         try:
             if not cv_paths:
                 return {}
-              # Create placeholders for IN clause
+            
+            # Create placeholders for IN clause
             placeholders = ','.join(['%s'] * len(cv_paths))
-            query = f"""                SELECT ad.cv_path, ap.first_name, ap.last_name, ad.application_id 
-                FROM applicationdetail ad
-                JOIN applicantprofile ap ON ad.application_id = ap.applicant_id
-                WHERE ad.cv_path IN ({placeholders})
+            query = f"""
+                SELECT cv_path, first_name, last_name, application_id 
+                FROM ApplicationDetail 
+                WHERE cv_path IN ({placeholders})
             """
             
             cursor = self.db.connection.cursor()
@@ -339,8 +271,7 @@ class ATSService:
             results = cursor.fetchall()
             cursor.close()
             
-            self.logger.info(f"Database query: {len(results)} matches for {len(cv_paths)} paths")
-            self.logger.debug(f"Query paths sample: {cv_paths[:3] if len(cv_paths) > 3 else cv_paths}")            # Build lookup dict
+            # Build lookup dict
             cv_info = {}
             for row in results:
                 cv_path, first_name, last_name, application_id = row
@@ -349,7 +280,6 @@ class ATSService:
                     'last_name': last_name or '',
                     'application_id': application_id
                 }
-                self.logger.debug(f"DB entry: {cv_path} -> {first_name} {last_name} (ID: {application_id})")
             
             return cv_info
             
@@ -370,7 +300,9 @@ class ATSService:
         """
         try:
             if not self.db.connect():
-                raise Exception("Gagal koneksi database")            # Jika ada application_id, dapatkan cv_path dari database
+                raise Exception("Gagal koneksi database")
+            
+            # Jika ada application_id, dapatkan cv_path dari database
             if application_id and not cv_path:
                 query = "SELECT cv_path FROM ApplicationDetail WHERE application_id = %s"
                 result = self.db.fetchOne(query, (application_id,))
@@ -408,7 +340,8 @@ class ATSService:
             # Format education
             education = [
                 edu['desc'] for edu in extracted_info.get('education', [])
-            ]            
+            ]
+            
             summary_data = SummaryData(
                 full_name=full_name,
                 birth_date=birth_date,
@@ -428,89 +361,22 @@ class ATSService:
             return SummaryData()
     
     def _extractSkillsFromSummary(self, summary: str) -> List[str]:
-        """
-        Extract skills dari summary menggunakan pattern recognition murni
-        TIDAK menggunakan hardcoded list (heuristik)
-        """
-        import re
-        
-        skills = []
-        
-        # Pattern 1: Skills section detection
-        # Mencari bagian yang dimulai dengan "Skills:", "Technical Skills:", dll
-        skills_patterns = [
-            r'(?:skills?|technical\s+skills?|core\s+competencies|expertise|proficiencies?)[\s:]*([^\n.]+)',
-            r'(?:experienced\s+in|proficient\s+in|skilled\s+in)[\s:]*([^\n.]+)',
-            r'(?:knowledge\s+of|familiar\s+with)[\s:]*([^\n.]+)'
+        """Helper untuk extract skills dari summary"""
+        common_skills = [
+            'Python', 'Java', 'JavaScript', 'C++', 'C#', 'SQL', 'HTML', 'CSS',
+            'React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask', 'Spring',
+            'Machine Learning', 'Data Science', 'AI', 'Deep Learning',
+            'Git', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP'
         ]
         
-        for pattern in skills_patterns:
-            matches = re.finditer(pattern, summary, re.IGNORECASE)
-            for match in matches:
-                skill_text = match.group(1).strip()
-                # Split by common delimiters and clean
-                individual_skills = re.split(r'[,;|&\n-]+', skill_text)
-                for skill in individual_skills:
-                    skill = skill.strip()
-                    # Clean up skill text
-                    skill = re.sub(r'^[\s\-•*]+', '', skill)  # Remove leading bullets/dashes
-                    skill = re.sub(r'[\s.!]+$', '', skill)    # Remove trailing punctuation
-                    if len(skill) > 2 and len(skill) < 50 and not skill.lower() in ['and', 'or', 'in', 'with']:
-                        skills.append(skill)
+        found_skills = []
+        summary_lower = summary.lower()
         
-        # Pattern 2: Software/Tool names (usually capitalized)
-        # Mencari nama software/tools yang biasanya dikapitalisasi
-        software_patterns = [
-            r'\b([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*)\b(?:\s+(?:software|system|tool|application|ERP))?',
-            r'(?:using|with|in)\s+([A-Z][a-zA-Z0-9\s]+?)(?=\s|,|\.|\n|$)',
-            r'([A-Z][a-zA-Z]+\s+\d+)',  # Like "MAS 90", "Office 365"
-        ]
+        for skill in common_skills:
+            if skill.lower() in summary_lower:
+                found_skills.append(skill)
         
-        for pattern in software_patterns:
-            matches = re.findall(pattern, summary)
-            for match in matches:
-                tool = match.strip() if isinstance(match, str) else match[0].strip()
-                # Filter out common words and names
-                if (len(tool) > 1 and len(tool) < 30 and 
-                    not re.match(r'^[A-Z][a-z]+\s+[A-Z][a-z]+$', tool) and  # Skip "First Last" 
-                    tool.lower() not in ['experience', 'skills', 'professional', 'summary', 'education', 'the', 'and']):
-                    skills.append(tool)
-        
-        # Pattern 3: Certifications and degrees
-        cert_patterns = [
-            r'\b(CPA|MBA|CMA|CIA|CFA|PMP|CISSP|CISA|ACCA)\b',
-            r'\b(Bachelor|Master|PhD|Doctorate)(?:\s+[a-zA-Z\s]+)?',
-            r'(?:Certified|Licensed)\s+([A-Za-z\s]+?)(?=\s|,|\.|\n)',
-        ]
-        
-        for pattern in cert_patterns:
-            matches = re.findall(pattern, summary, re.IGNORECASE)
-            for match in matches:
-                cert = match.strip() if isinstance(match, str) else match[0].strip()
-                if len(cert) > 1 and len(cert) < 50:
-                    skills.append(cert)
-        
-        # Clean up and deduplicate
-        cleaned_skills = []
-        for skill in skills:
-            skill = skill.strip()
-            # Additional cleaning
-            if (skill and len(skill) > 1 and len(skill) < 50 and 
-                skill.lower() not in ['and', 'or', 'in', 'with', 'the', 'a', 'an', 'to', 'of']):
-                cleaned_skills.append(skill)
-        
-        # Remove duplicates (case insensitive)
-        unique_skills = []
-        seen_lower = set()
-        for skill in cleaned_skills:
-            if skill.lower() not in seen_lower:
-                unique_skills.append(skill)
-                seen_lower.add(skill.lower())
-        
-        # Sort by length (longer skills first, often more specific)
-        unique_skills.sort(key=len, reverse=True)
-        
-        return unique_skills[:15]  # Limit to top 15 most relevant skills
+        return found_skills
     
     def getAllCVPaths(self) -> List[str]:
         """Mendapatkan semua path CV dari data directory"""

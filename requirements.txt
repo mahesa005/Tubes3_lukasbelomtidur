@@ -1,0 +1,5 @@
+PyQt5==5.15.10
+pypdf==4.0.1
+mysql-connector-python==8.2.0
+pathlib==1.0.1
+Faker==20.1.0
