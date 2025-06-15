@@ -5,14 +5,14 @@ from pathlib import Path
 DATABASE_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'password',
+    'password': '',
     'database': 'ats_database',
     'port': 3306
 }
 
 # File Paths
 BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / 'src' / 'archive' / 'data'
+DATA_DIR = BASE_DIR / 'src' / 'archive' / 'data' / 'data'
 RESUME_CSV_PATH = BASE_DIR / 'src' / 'archive' / 'Resume' / 'Resume.csv'
 
 # Algorithm Settings
