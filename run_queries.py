@@ -1,4 +1,9 @@
+import re
+
 from src.database.connection import DatabaseConnection
+from src.pdfprocessor.pdfExtractor import PDFExtractor
+from src.pdfprocessor.regexExtractor import RegexExtractor
+
 from src.database.queries import (
     get_applicant_id_by_cv_path,
     get_first_name_by_cv_path,
@@ -18,7 +23,10 @@ from src.models.ResultCard import (
 from src.models.SummaryCard import (
     print_summarycard,
 )
-from config import DATABASE_CONFIG
+from config import DATA_DIR, DATABASE_CONFIG
+import os
+from pathlib import Path
+
 
 def main():
     cv = r'data/BUSINESS-DEVELOPMENT/12814706.pdf'  # sesuaikan
@@ -27,24 +35,21 @@ def main():
     db.connect()
     db.useDatabase(DATABASE_CONFIG['database'])
 
-    # print("Applicant ID   :", get_applicant_id_by_cv_path(db.connection, cv))
-    # print("First  Name    :", get_first_name_by_cv_path(db.connection, cv))
-    # print("Last   Name    :", get_last_name_by_cv_path(db.connection, cv))
-    # print("Date of Birth  :", get_date_of_birth_by_cv_path(db.connection, cv))
-    # print("Address        :", get_address_by_cv_path(db.connection, cv))
-    # print("Phone Number   :", get_phone_number_by_cv_path(db.connection, cv))
-    # print("Application ID :", get_application_id_by_cv_path(db.connection, cv))
-    # print("Application Role:", get_application_role_by_cv_path(db.connection, cv))
+    rel_paths = get_all_cv_paths(db.connection)
 
+    for rel in rel_paths[:5]:           
+        rel_stripped = rel.split('data/', 1)[-1]
 
-    print("All CV Paths     :", get_all_cv_paths(db.connection))
+        full_path = DATA_DIR / rel_stripped
 
-    rc = get_result_card_by_cv_path(db.connection, cv)
-    print_resultcard(rc)
+        print(f"Rel: {rel}")
+        print(f"Abs: {full_path}")
+        print("Exists:", full_path.exists())
 
-    sc = get_summary_data_by_cv_path(db.connection, cv)
-    print_summarycard(sc)
-
+        if full_path.exists():
+            rc = get_result_card_by_cv_path(db.connection, rel)
+            print_resultcard(rc)
+        print()
 
     db.disconnect()
 

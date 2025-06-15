@@ -5,6 +5,7 @@ class ResultCard:
         cv_path: str = "",
         matched_keywords: dict = None, # key: Word, value: total occurrence
         total_matches: int = 0 # sum of total occurence
+        
     ):
         
         self.full_name = full_name
