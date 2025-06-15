@@ -39,10 +39,11 @@ class DataSeeder:
 
     def generateSampleApplicants(self, count=10):
 
-        # 1) buka koneksi ke database
+        # buka koneksi ke database
         if not self.db.connect():
             self.logger.error("generateSampleApplicants: Gagal koneksi.")
             return
+        used_cv_paths = set()
 
         fake = Faker()
         base_data_dir = Path(DATA_DIR)
@@ -93,8 +94,30 @@ class DataSeeder:
                 )
                 continue
 
-            chosen_pdf = random.choice(pdf_files)
+            # hanya ambil pdf yang belum dipakai di batch ini
+            available = [p for p in pdf_files if str(p) not in used_cv_paths]
+            if not available:
+                self.logger.warning(
+                    f"Semua CV di folder '{application_role}' sudah dipakai, "
+                    "lanjut ke kandidat berikutnya"
+                )
+                continue
+            chosen_pdf = random.choice(available)
             cv_path = str(chosen_pdf)
+
+            # skip kalo udah used in this batch
+            if cv_path in used_cv_paths:
+                self.logger.info(f"Skipping duplicate CV in batch: {cv_path}")
+                continue
+            used_cv_paths.add(cv_path)
+
+            # skip kalo cv_path udah exists di DB
+            self.db.cursor.execute(
+                "SELECT 1 FROM ApplicationDetail WHERE cv_path = %s", (cv_path,)
+            )
+            if self.db.cursor.fetchone():
+                self.logger.info(f"Skipping, CV already in DB: {cv_path}")
+                continue
 
             # insert ke AD
             insert_detail = """

@@ -21,3 +21,17 @@ class ResultCard:
         total_matches=total
     )
     """
+def print_resultcard(resultcard):
+    print("=== Result Card ===")
+    if isinstance(resultcard, dict):
+        for key, val in resultcard.items():
+            print(f"{key}: {val}")
+    elif isinstance(resultcard, (list, tuple, set)):
+        for idx, item in enumerate(resultcard, 1):
+            print(f"{idx}. {item}")
+    elif hasattr(resultcard, '__dict__'):
+        for key, val in vars(resultcard).items():
+            print(f"{key}: {val}")
+    else:
+        print(resultcard)
+    print()
