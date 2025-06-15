@@ -161,7 +161,6 @@ def get_application_role_by_cv_path(conn, cv_path):
     finally:
         cursor.close()
 
-
 def get_result_card_by_cv_path(conn, cv_path):
     cursor = conn.cursor()
     try:
@@ -186,75 +185,33 @@ def get_result_card_by_cv_path(conn, cv_path):
 
 
 def get_summary_data_by_cv_path(conn, cv_path):
-    from src.pdfprocessor.pdfExtractor import PDFExtractor
-    from src.pdfprocessor.regexExtractor import RegexExtractor
-    
     cursor = conn.cursor()
-    
-    # Initialize extracted data variables
-    skills_list = []
-    work_experience_list = []
-    education_list = []
-    
-    try:
-        cursor.execute(
-            "SELECT CONCAT(ap.first_name, ' ', ap.last_name) AS full_name, "
-            "ap.date_of_birth, ap.phone_number, ad.cv_path "
-            "FROM ApplicantProfile ap "
-            "JOIN ApplicationDetail ad ON ap.applicant_id = ad.applicant_id "
-            "WHERE ad.cv_path = %s;", (cv_path,)
-        )
-        row = cursor.fetchone()
-        # Consume any remaining results
-        cursor.fetchall()
-        if not row:
-            return None
-        full_name, dob, phone, path = row
-        dob_str = dob.isoformat() if dob else ""
-        
-        # Extract CV data
-        try:
-            pdf_extractor = PDFExtractor()
-            regex_extractor = RegexExtractor()
-            
-            # Create full path for PDF extraction
-            pdf_full_path = f"src/archive/data/{cv_path}"
-            
-            # Extract text from PDF
-            extracted_text = pdf_extractor.PDFExtractForMatch(pdf_full_path)
-            if extracted_text:
-                # Extract CV sections
-                cv_sections = regex_extractor.extract_cv_sections(extracted_text)
-                skills_list = cv_sections['skills']
-                work_experience_list = cv_sections['work_experience']
-                education_list = cv_sections['education']
-        except Exception as cv_error:
-            print(f"Error extracting CV data: {cv_error}")
-            # Continue with empty lists if CV extraction fails
-        
-        return SummaryData(
-            full_name=full_name,
-            birth_date=dob_str,
-            phone_number=phone or "",
-            skills=skills_list,
-            cv_path=path,
-            work_experience=work_experience_list,
-            education=education_list
-        )
-    except Exception as e:
-        print(f"Error in get_summary_data_by_cv_path: {e}")
+    cursor.execute(
+        "SELECT CONCAT(ap.first_name, ' ', ap.last_name) AS full_name, "
+        "ap.date_of_birth, ap.phone_number, ad.cv_path "
+        "FROM ApplicantProfile ap "
+        "JOIN ApplicationDetail ad ON ap.applicant_id = ad.applicant_id "
+        "WHERE ad.cv_path = %s;", (cv_path,)
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    if not row:
         return None
-    finally:
-        cursor.close()
+    full_name, dob, phone, path = row
+    dob_str = dob.isoformat() if dob else ""
+    return SummaryData(
+        full_name=full_name,
+        birth_date=dob_str,
+        phone_number=phone or "",
+        skills=[],
+        cv_path=path,
+        work_experience=[],
+        education=[]
+    )
 
 def get_all_cv_paths(conn):
     cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT cv_path FROM ApplicationDetail;")
-        rows = cursor.fetchall()
-        return [row[0] for row in rows]
-    except Exception as e:
-        print(f"Error in get_all_cv_paths: {e}")
-        return []
-    finally:
-        cursor.close()
+    cursor.execute("SELECT cv_path FROM ApplicationDetail;")
+    rows = cursor.fetchall()
+    cursor.close()
+    return [row[0] for row in rows]
