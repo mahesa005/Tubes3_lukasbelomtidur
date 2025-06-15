@@ -40,7 +40,7 @@ class RetroStyle:
 
 
 class CVLoadDialog:
-    """Custom dialog untuk input MAX_CV_LOAD dengan retro styling"""
+    """Custom dialog untuk input MAX_CV_LOAD dengan retro styling - RESPONSIVE & SCROLLABLE"""
     
     def __init__(self, parent, total_cvs):
         self.result = None
@@ -49,133 +49,277 @@ class CVLoadDialog:
         # Create dialog window
         self.dialog = Toplevel(parent)
         self.dialog.title("CV Loading Configuration")
-        self.dialog.geometry("500x300")
+        self.dialog.geometry("600x500")  # Bigger size
         self.dialog.configure(bg=RetroStyle.BG_MAIN)
         self.dialog.transient(parent)
         self.dialog.grab_set()
         
+        # Make it resizable
+        self.dialog.resizable(True, True)
+        self.dialog.minsize(500, 400)  # Minimum size
+        
         # Center the dialog
-        self.dialog.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
+        self._center_dialog(parent)
         
         self._build_dialog()
         
+    def _center_dialog(self, parent):
+        """Center dialog on parent window"""
+        parent.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() // 2) - 300
+        y = parent.winfo_y() + (parent.winfo_height() // 2) - 250
+        self.dialog.geometry(f"+{x}+{y}")
+        
     def _build_dialog(self):
         # Title bar
-        title_bar = Frame(self.dialog, bg=RetroStyle.BG_TITLEBAR, height=30)
+        title_bar = Frame(self.dialog, bg=RetroStyle.BG_TITLEBAR, height=35)
         title_bar.pack(fill=X)
         title_bar.pack_propagate(False)
         
         Label(title_bar, text="⚙️ CV Database Loading Configuration",
               bg=RetroStyle.BG_TITLEBAR, fg="white",
-              font=("MS Sans Serif", 10, "bold")).pack(side=LEFT, padx=10, pady=5)
+              font=("MS Sans Serif", 11, "bold")).pack(side=LEFT, padx=15, pady=8)
         
-        # Main content
-        content = Frame(self.dialog, bg=RetroStyle.BG_WINDOW, relief="raised", bd=2)
-        content.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        # SCROLLABLE MAIN CONTENT
+        main_frame = Frame(self.dialog, bg=RetroStyle.BG_MAIN)
+        main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
         
-        # Info section
-        info_frame = Frame(content, bg=RetroStyle.BG_WINDOW, padx=20, pady=20)
+        # Create canvas and scrollbar for scrollable content
+        canvas = Canvas(main_frame, bg=RetroStyle.BG_WINDOW, relief="sunken", bd=2)
+        scrollbar = Scrollbar(main_frame, orient="vertical", command=canvas.yview,
+                             bg=RetroStyle.BG_BUTTON, relief="raised", bd=2)
+        scrollable_frame = Frame(canvas, bg=RetroStyle.BG_WINDOW)
+        
+        # Configure scrolling
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # RESPONSIVE CONTENT INSIDE SCROLLABLE FRAME
+        self._build_scrollable_content(scrollable_frame)
+        
+        # FIXED BOTTOM BUTTONS (outside scroll area)
+        self._build_bottom_buttons()
+        
+        # Bind mousewheel to canvas
+        self._bind_mousewheel(canvas)
+        
+        # Make content responsive to window resize
+        canvas.bind('<Configure>', self._on_canvas_configure)
+        
+    def _build_scrollable_content(self, parent):
+        """Build the scrollable content inside the dialog"""
+        
+        # Info section with responsive layout
+        info_section = Frame(parent, bg=RetroStyle.BG_WINDOW, relief="raised", bd=2)
+        info_section.pack(fill=X, padx=15, pady=15)
+        
+        info_frame = Frame(info_section, bg=RetroStyle.BG_WINDOW, padx=20, pady=20)
         info_frame.pack(fill=X)
         
         Label(info_frame, text="💾 Database Information",
+              font=("MS Sans Serif", 14, "bold"),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(anchor="w", pady=(0, 15))
+        
+        # Stats with responsive grid
+        stats_frame = Frame(info_frame, bg=RetroStyle.BG_WINDOW)
+        stats_frame.pack(fill=X, pady=10)
+        
+        Label(stats_frame, text=f"📊 Total CVs in database:",
+              font=("MS Sans Serif", 11),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_BLUE).grid(row=0, column=0, sticky="w", pady=5)
+        
+        Label(stats_frame, text=f"{self.total_cvs} files",
+              font=("MS Sans Serif", 11, "bold"),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_RED).grid(row=0, column=1, sticky="w", padx=10)
+        
+        Label(stats_frame, text="⚡ Performance:",
+              font=("MS Sans Serif", 11),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_BLUE).grid(row=1, column=0, sticky="w", pady=5)
+        
+        Label(stats_frame, text="More CVs = Better results but slower loading",
+              font=("MS Sans Serif", 9),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).grid(row=1, column=1, sticky="w", padx=10)
+        
+        # Configure grid weights for responsiveness
+        stats_frame.grid_columnconfigure(1, weight=1)
+        
+        # Input section with responsive design
+        input_section = Frame(parent, bg=RetroStyle.BG_WINDOW, relief="sunken", bd=2)
+        input_section.pack(fill=X, padx=15, pady=15)
+        
+        input_frame = Frame(input_section, bg=RetroStyle.BG_WINDOW, padx=20, pady=20)
+        input_frame.pack(fill=X)
+        
+        Label(input_frame, text="🎯 Select Number of CVs to Load",
               font=("MS Sans Serif", 12, "bold"),
-              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(anchor="w", pady=(0, 10))
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(anchor="w", pady=(0, 15))
         
-        Label(info_frame, text=f"📊 Total CVs in database: {self.total_cvs}",
-              font=("MS Sans Serif", 10),
-              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_BLUE).pack(anchor="w", pady=2)
-        
-        Label(info_frame, text="⚡ Loading more CVs will take longer but provide more search results",
-              font=("MS Sans Serif", 8),
-              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(anchor="w", pady=2)
-        
-        # Input section
-        input_frame = Frame(content, bg=RetroStyle.BG_WINDOW, relief="sunken", bd=1, padx=20, pady=15)
-        input_frame.pack(fill=X, padx=20, pady=10)
-        
-        Label(input_frame, text="How many CVs would you like to load?",
-              font=("MS Sans Serif", 10, "bold"),
-              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(anchor="w", pady=(0, 10))
-        
-        # Input with spinbox
+        # Responsive input row
         input_row = Frame(input_frame, bg=RetroStyle.BG_WINDOW)
-        input_row.pack(fill=X)
+        input_row.pack(fill=X, pady=10)
         
         Label(input_row, text="Number of CVs:",
-              font=("MS Sans Serif", 9),
+              font=("MS Sans Serif", 10),
               bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(side=LEFT)
         
         self.cv_count_var = IntVar(value=min(DEFAULT_MAX_CV_LOAD, self.total_cvs))
         spinbox = Spinbox(input_row, from_=1, to=self.total_cvs, 
                          textvariable=self.cv_count_var,
-                         font=("MS Sans Serif", 9), width=10,
+                         font=("MS Sans Serif", 10), width=12,
                          relief="sunken", bd=2, bg="white")
-        spinbox.pack(side=LEFT, padx=10)
+        spinbox.pack(side=LEFT, padx=15)
         
-        Label(input_row, text=f"(Max: {self.total_cvs})",
-              font=("MS Sans Serif", 8),
-              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(side=LEFT, padx=(5, 0))
+        Label(input_row, text=f"(Maximum: {self.total_cvs})",
+              font=("MS Sans Serif", 9),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(side=LEFT, padx=(10, 0))
         
-        # Quick select buttons
-        quick_frame = Frame(input_frame, bg=RetroStyle.BG_WINDOW)
-        quick_frame.pack(fill=X, pady=(10, 0))
+        # Quick select with responsive wrapping
+        quick_section = Frame(input_frame, bg=RetroStyle.BG_WINDOW)
+        quick_section.pack(fill=X, pady=15)
         
-        Label(quick_frame, text="Quick Select:",
-              font=("MS Sans Serif", 8),
-              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(side=LEFT)
+        Label(quick_section, text="🚀 Quick Select Options:",
+              font=("MS Sans Serif", 10, "bold"),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(anchor="w", pady=(0, 10))
         
-        quick_values = [50, 100, 200, self.total_cvs]
+        # Responsive button grid
+        quick_buttons = Frame(quick_section, bg=RetroStyle.BG_WINDOW)
+        quick_buttons.pack(fill=X)
+        
+        quick_values = [25, 50, 100, 200, 500, self.total_cvs]
+        row, col = 0, 0
+        
         for val in quick_values:
             if val <= self.total_cvs:
-                btn_text = "All" if val == self.total_cvs else str(val)
-                btn = Button(quick_frame, text=btn_text,
+                btn_text = "All CVs" if val == self.total_cvs else f"{val} CVs"
+                btn = Button(quick_buttons, text=btn_text,
                            command=lambda v=val: self.cv_count_var.set(v),
-                           font=("MS Sans Serif", 7), width=6,
-                           bg=RetroStyle.BG_BUTTON, relief="raised", bd=1)
-                btn.pack(side=LEFT, padx=2)
+                           font=("MS Sans Serif", 8, "bold"), width=10,
+                           bg=RetroStyle.BG_BUTTON, relief="raised", bd=2,
+                           cursor="hand2")
+                btn.grid(row=row, column=col, padx=5, pady=3, sticky="ew")
+                
+                col += 1
+                if col >= 3:  # 3 buttons per row for responsiveness
+                    col = 0
+                    row += 1
         
-        # Performance warning
-        warning_frame = Frame(content, bg="#fffacd", relief="raised", bd=1, padx=15, pady=10)
-        warning_frame.pack(fill=X, padx=20, pady=(0, 10))
+        # Configure button grid weights
+        for i in range(3):
+            quick_buttons.grid_columnconfigure(i, weight=1)
         
-        Label(warning_frame, text="⚠️ Performance Guide:",
-              font=("MS Sans Serif", 8, "bold"),
-              bg="#fffacd", fg=RetroStyle.TEXT_RED).pack(anchor="w")
+        # Performance guide - scrollable and responsive
+        perf_section = Frame(parent, bg="#fffacd", relief="raised", bd=2)
+        perf_section.pack(fill=X, padx=15, pady=15)
         
-        Label(warning_frame, text="• 1-50 CVs: Very Fast (~1-2 seconds)",
-              font=("MS Sans Serif", 7),
-              bg="#fffacd", fg=RetroStyle.TEXT_MAIN).pack(anchor="w")
+        perf_frame = Frame(perf_section, bg="#fffacd", padx=20, pady=15)
+        perf_frame.pack(fill=X)
         
-        Label(warning_frame, text="• 51-200 CVs: Fast (~3-10 seconds)",
-              font=("MS Sans Serif", 7),
-              bg="#fffacd", fg=RetroStyle.TEXT_MAIN).pack(anchor="w")
+        Label(perf_frame, text="⚠️ Performance Guide & Recommendations:",
+              font=("MS Sans Serif", 11, "bold"),
+              bg="#fffacd", fg=RetroStyle.TEXT_RED).pack(anchor="w", pady=(0, 10))
         
-        Label(warning_frame, text="• 200+ CVs: Slower (~10+ seconds)",
-              font=("MS Sans Serif", 7),
-              bg="#fffacd", fg=RetroStyle.TEXT_MAIN).pack(anchor="w")
+        perf_items = [
+            ("🟢 1-50 CVs:", "Very Fast loading (~10-20 seconds)", "Best for quick testing"),
+            ("🟡 51-200 CVs:", "Fast loading (~20-40 seconds)", "Good balance of speed & results"),
+            ("🟠 201-500 CVs:", "Medium loading (~40-80 seconds)", "More comprehensive search"),
+            ("🔴 500+ CVs:", "Slower loading (~80+ seconds)", "Full database search")
+        ]
         
-        # Buttons
-        btn_frame = Frame(content, bg=RetroStyle.BG_WINDOW)
-        btn_frame.pack(fill=X, padx=20, pady=20)
+        for range_text, time_text, desc_text in perf_items:
+            item_frame = Frame(perf_frame, bg="#fffacd")
+            item_frame.pack(fill=X, pady=2)
+            
+            Label(item_frame, text=range_text,
+                  font=("MS Sans Serif", 9, "bold"),
+                  bg="#fffacd", fg=RetroStyle.TEXT_MAIN).pack(side=LEFT, anchor="w")
+            
+            Label(item_frame, text=f"{time_text} - {desc_text}",
+                  font=("MS Sans Serif", 8),
+                  bg="#fffacd", fg=RetroStyle.TEXT_MAIN).pack(side=LEFT, padx=(10, 0))
         
-        ok_btn = Button(btn_frame, text="🚀 Load CVs", command=self._ok_clicked,
-                       font=("MS Sans Serif", 9, "bold"), width=12,
-                       bg="#90EE90", fg=RetroStyle.TEXT_MAIN,
-                       relief="raised", bd=2, cursor="hand2")
+        # Memory usage warning
+        memory_section = Frame(parent, bg="#ffebee", relief="raised", bd=2)
+        memory_section.pack(fill=X, padx=15, pady=15)
+        
+        memory_frame = Frame(memory_section, bg="#ffebee", padx=20, pady=15)
+        memory_frame.pack(fill=X)
+        
+        Label(memory_frame, text="💾 Memory Usage Information:",
+              font=("MS Sans Serif", 10, "bold"),
+              bg="#ffebee", fg=RetroStyle.TEXT_RED).pack(anchor="w", pady=(0, 8))
+        
+        memory_text = "Each CV uses approximately 50-200KB of RAM when loaded. Loading 1000+ CVs may require 100-200MB of memory."
+        Label(memory_frame, text=memory_text,
+              font=("MS Sans Serif", 8),
+              bg="#ffebee", fg=RetroStyle.TEXT_MAIN,
+              wraplength=500, justify="left").pack(anchor="w")
+        
+    def _build_bottom_buttons(self):
+        """Build fixed bottom buttons outside scroll area"""
+        btn_container = Frame(self.dialog, bg=RetroStyle.BG_MAIN)
+        btn_container.pack(fill=X, padx=10, pady=10)
+        
+        btn_frame = Frame(btn_container, bg=RetroStyle.BG_WINDOW, relief="raised", bd=2)
+        btn_frame.pack(fill=X, padx=5, pady=5)
+        
+        button_area = Frame(btn_frame, bg=RetroStyle.BG_WINDOW)
+        button_area.pack(fill=X, padx=20, pady=15)
+        
+        # Responsive button layout
+        ok_btn = Button(button_area, text="🚀 Load CVs & Start", 
+                       command=self._ok_clicked,
+                       font=("MS Sans Serif", 10, "bold"), 
+                       bg="#4CAF50", fg="white",
+                       relief="raised", bd=3, cursor="hand2",
+                       padx=20, pady=8)
         ok_btn.pack(side=RIGHT, padx=5)
         
-        cancel_btn = Button(btn_frame, text="❌ Cancel", command=self._cancel_clicked,
-                           font=("MS Sans Serif", 9), width=10,
-                           bg="#FFB6C1", fg=RetroStyle.TEXT_MAIN,
-                           relief="raised", bd=2, cursor="hand2")
+        cancel_btn = Button(button_area, text="❌ Cancel", 
+                           command=self._cancel_clicked,
+                           font=("MS Sans Serif", 10), 
+                           bg="#f44336", fg="white",
+                           relief="raised", bd=3, cursor="hand2",
+                           padx=20, pady=8)
         cancel_btn.pack(side=RIGHT, padx=5)
         
-        # Bind Enter key
-        self.dialog.bind('<Return>', lambda e: self._ok_clicked())
-        self.dialog.bind('<Escape>', lambda e: self._cancel_clicked())
+        # Show current selection
+        self.selection_label = Label(button_area, 
+                                    textvariable=self.cv_count_var,
+                                    font=("MS Sans Serif", 12, "bold"),
+                                    bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_BLUE)
+        self.selection_label.pack(side=LEFT)
         
-        # Focus on spinbox
-        spinbox.focus_set()
+        Label(button_area, text="CVs selected",
+              font=("MS Sans Serif", 10),
+              bg=RetroStyle.BG_WINDOW, fg=RetroStyle.TEXT_MAIN).pack(side=LEFT, padx=(5, 0))
+        
+    def _bind_mousewheel(self, canvas):
+        """Bind mousewheel scrolling to canvas"""
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            
+        def _bind_to_mousewheel(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            
+        def _unbind_from_mousewheel(event):
+            canvas.unbind_all("<MouseWheel>")
+            
+        canvas.bind('<Enter>', _bind_to_mousewheel)
+        canvas.bind('<Leave>', _unbind_from_mousewheel)
+        
+    def _on_canvas_configure(self, event):
+        """Handle canvas resize for responsiveness"""
+        canvas = event.widget
+        canvas.itemconfig(canvas.find_all()[0], width=event.width)
     
     def _ok_clicked(self):
         self.result = self.cv_count_var.get()
@@ -186,6 +330,8 @@ class CVLoadDialog:
         self.dialog.destroy()
     
     def show(self):
+        # Set focus and wait
+        self.dialog.focus_set()
         self.dialog.wait_window()
         return self.result
 
