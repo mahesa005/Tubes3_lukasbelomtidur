@@ -26,10 +26,9 @@ class PatternMatcher:
         self.levenshtein = LevenshteinDistance()
         # self.ac = AhoCorasick() # ntar kalo implement Aho-Corasick 
         
-    
     def exactMatch(self, text, keywords, algorithm='KMP') -> dict:
         """
-        Melakukan pencocokan pola secara eksak
+        Melakukan pencocokan pola secara eksak (case-insensitive)
         
         Argumen:
             text (str): Teks yang akan dicari
@@ -38,33 +37,33 @@ class PatternMatcher:
             
         Mengembalikan:
             dict: Hasil yang berisi kecocokan dan info waktu eksekusi
-            
-        TODO:
-        - Implementasikan pencocokan eksak menggunakan algoritma yang dipilih
-        - Ukur waktu eksekusi
-        - Hitung jumlah kemunculan untuk setiap kata kunci
-        - Kembalikan hasil yang komprehensif
         """
-        start = time.time() # waktu jalan
-        result = {} # dict 
-        if algorithm.upper() == 'KMP': #kalo milih kmp.upper = KMP
-            matches = self.kmp.searchMultiple(text, keywords)
-        elif algorithm.upper() == 'BM': # kalo milih BM.upper = BM
-            matches = self.boyerMoore.searchMultiple(text, keywords)
-        # elif algorithm.upper() == 'AC' ; 
-        #     matches = self.ac.SearchMultiple(text, keywords)  --- ntar kalo implement 
+        start = time.time()
+        result = {}
+          # Convert to lowercase for case-insensitive matching
+        text_lower = text.lower()
+        keywords_lower = [keyword.lower() for keyword in keywords]
+        
+        if algorithm.upper() == 'KMP':
+            matches = self.kmp.searchMultiple(text_lower, keywords_lower)
+        elif algorithm.upper() == 'BM' or algorithm.upper() == 'BOYER-MOORE':
+            matches = self.boyerMoore.searchMultiple(text_lower, keywords_lower)
         else: 
-            raise ValueError("Algoritma tidak dikenali. Pilih 'KMP' atau 'BM' (atau 'AC').") # kek throw kalo di java
-        for keyword in keywords:
+            raise ValueError(f"Algoritma tidak dikenali: '{algorithm}'. Pilih 'KMP', 'BM', atau 'Boyer-Moore'.")
+            
+        # Map results back to original keywords (preserve original case)
+        for i, keyword in enumerate(keywords):
+            keyword_lower = keywords_lower[i]
             result[keyword] = {
-                'positions': matches.get(keyword, []),  # ngambil posisi pattern yang ketemu (index pertamanya pattern ditext)
-                'count': len(matches.get(keyword, [])) # nyimpen jumlah kemunculanny 
+                'positions': matches.get(keyword_lower, []),
+                'count': len(matches.get(keyword_lower, []))
             }
+            
         end = time.time() - start 
-        return { # nested dict
-            'matches': result, # hasilnya dalam dict 
+        return {
+            'matches': result,
             'algorithm': algorithm,
-            'endtime': end + "ms" # pake milisekon
+            'endtime': f"{end*1000:.2f} ms"
         }
 
 
@@ -94,14 +93,9 @@ class PatternMatcher:
             for idx, token in enumerate(tokens): # maksuddari enumerate itu buat dapetin indexnya juga
                 maxLen = max(len(token), len(keyword)) # bakal cari yang panjangnya maksimal dari keyword ama hasil split tadi
                 if maxLen == 0: # kalo misalkan panjangnya 0, yaudah gaada yang bisa dibandingin
-                    similarity = 1.0
-
-                # WARNING: INI PAKE LEVENSHTEIN DISTANCE
+                    similarity = 1.0                # WARNING: INI PAKE LEVENSHTEIN DISTANCE
                 else: # kalo ga 0, pake Levenshtein (HARUSNYA DISINI MANGGIL DARI LevenshteinDistance.py)
-                    dist = self.levenshtein.distance(token, keyword) #ini cari jaraknya berdasarkan total subtitusi, hapus, insert
-                    similarity = 1 - dist / maxLen # rumusnya ini, harusnya di LevenshteinDistance.py ada fungsi similarity yang bisa dipake
-                    # jadi ntar ..... 
-                    # manggilnya sim = self.levenshtein.similarity(token, keyword)
+                    similarity = self.levenshtein.similarity(token, keyword)
                 if similarity >= threshold: # ini jadi sim >= threshold 
                     fuzzyResults.append({'token': token, 'index': idx, 'similarity': similarity}) # similarity => sim ; 
                 # WARNING: INI PAKE LEVENSHTEIN DISTANCE
@@ -111,7 +105,7 @@ class PatternMatcher:
         return {
             'matches': result,
             'threshold': threshold,
-            'endtime': end + "ms"  # waktu eksekusi dalam milisekon
+            'endtime': f"{end*1000:.2f} ms"  # waktu eksekusi dalam milisekon
         }
 
     def hybridMatch(self, text, keywords, algorithm='KMP', fuzzyThreshold=0.7) -> dict:
@@ -142,3 +136,50 @@ class PatternMatcher:
             'exact': exact,
             'fuzzy': fuzzy
         }
+    
+#     # from PatternMatcher import PatternMatcher
+
+# def main():
+#     print("=== PatternMatcher Module Test Suite ===\n")
+#     matcher = PatternMatcher()
+#     text = "Saya adalah seorang Software Engineer berpengalaman di bidang Python dan ReactJS. Pernah mengerjakan project database SQL dan juga memiliki basic di C++."
+#     keywords = ["python", "reactjs", "engineer", "sql", "c++", "java"]
+
+#     # --- Test exactMatch (KMP) ---
+#     print("--- Testing exactMatch() with KMP ---")
+#     result_kmp = matcher.exactMatch(text, keywords, algorithm='KMP')
+#     for k, v in result_kmp['matches'].items():
+#         print(f"Keyword: '{k}' | Positions: {v['positions']} | Count: {v['count']}")
+#     print(f"Algorithm: {result_kmp['algorithm']}, Time: {result_kmp['endtime']}")
+
+#     # --- Test exactMatch (BM) ---
+#     print("\n--- Testing exactMatch() with BM ---")
+#     result_bm = matcher.exactMatch(text, keywords, algorithm='BM')
+#     for k, v in result_bm['matches'].items():
+#         print(f"Keyword: '{k}' | Positions: {v['positions']} | Count: {v['count']}")
+#     print(f"Algorithm: {result_bm['algorithm']}, Time: {result_bm['endtime']}")
+
+#     # --- Test fuzzyMatch ---
+#     print("\n--- Testing fuzzyMatch() ---")
+#     typo_keywords = ["pythun", "reactj", "enginer", "sqle", "c++", "java"]
+#     result_fuzzy = matcher.fuzzyMatch(text, typo_keywords, threshold=0.7)
+#     for k, matches in result_fuzzy['matches'].items():
+#         print(f"Keyword: '{k}' | Matches: {matches}")
+#     print(f"Threshold: {result_fuzzy['threshold']}, Time: {result_fuzzy['endtime']}")
+
+#     # --- Test hybridMatch ---
+#     print("\n--- Testing hybridMatch() ---")
+#     result_hybrid = matcher.hybridMatch(text, typo_keywords, algorithm='KMP', fuzzyThreshold=0.7)
+#     print("Exact matches:")
+#     for k, v in result_hybrid['exact']['matches'].items():
+#         print(f"Keyword: '{k}' | Positions: {v['positions']} | Count: {v['count']}")
+#     print("Fuzzy matches:")
+#     for k, matches in result_hybrid['fuzzy']['matches'].items():
+#         print(f"Keyword: '{k}' | Matches: {matches}")
+#     print(f"Hybrid test done.\n")
+
+#     print("=== All PatternMatcher Tests Completed ===\n")
+
+# if __name__ == "__main__":
+#     main()
+# # 

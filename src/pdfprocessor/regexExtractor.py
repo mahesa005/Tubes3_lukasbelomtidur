@@ -45,6 +45,7 @@ class RegexExtractor:
             r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',  # Format US
             r'\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',  # US dengan kode negara
             r'\+\d{1,3}[-.\s]?\d{1,14}',  # Format internasional
+            r'\b0\d{9,12}\b',  # Format Indonesia, hanya angka, mulai dari 0
         ]
         
         # Pola tanggal
@@ -64,11 +65,11 @@ class RegexExtractor:
         Mengembalikan:
             list: Daftar alamat email yang ditemukan
         """
-        pass
-    
+        return re.findall(self.emailPattern, text)
+
     def extractPhone(self, text):
         """
-        Mengekstrak nomor telepon dari teks
+        Mengekstrak nomor telepon dari teks (semua format, hasil mentah)
         
         Argumen:
             text (str): Teks CV
@@ -76,11 +77,27 @@ class RegexExtractor:
         Mengembalikan:
             list: Daftar nomor telepon yang ditemukan
         """
-        pass
-    
+        phones = []
+        for pattern in self.phonePatterns:
+            phones.extend(re.findall(pattern, text))
+        return phones
+
+    def extractPhones(self, text, digit_length=12):
+        """
+        Mengekstrak nomor telepon dari teks, hasil hanya digit dan panjang sesuai database
+        """
+        phones = []
+        for pattern in self.phonePatterns:
+            phones.extend(re.findall(pattern, text))
+        # Bersihkan: hanya digit
+        clean_phones = [re.sub(r'\D', '', phone) for phone in phones]
+        # Filter panjang sesuai kebutuhan (default 12 digit)
+        clean_phones = [phone for phone in clean_phones if len(phone) == digit_length]
+        return clean_phones
+
     def extractSummary(self, text):
         """
-        Mengekstrak ringkasan/tujuan dari CV
+        Mengekstrak ringkasan/tujuan dari CV (contoh sederhana: ambil paragraf pertama)
         
         Argumen:
             text (str): Teks CV
@@ -93,11 +110,12 @@ class RegexExtractor:
         - Ekstrak paragraf yang relevan
         - Bersihkan hasil ekstraksi
         """
-        pass
-    
+        paragraphs = [p.strip() for p in text.split('\n') if len(p.strip()) > 30]
+        return paragraphs[0] if paragraphs else ""
+
     def extractSkills(self, text):
         """
-        Mengekstrak keterampilan dari CV
+        Mengekstrak keterampilan dari CV (contoh: cari baris dengan kata 'Skill' lalu split koma)
         
         Argumen:
             text (str): Teks CV
@@ -110,11 +128,21 @@ class RegexExtractor:
         - Ekstrak keterampilan satu per satu
         - Tangani berbagai format (poin, dipisahkan koma, dll)
         """
-        pass
-    
+        skills = []
+        for line in text.split('\n'):
+            if 'skill' in line.lower():
+                # Ambil setelah ':' jika ada
+                if ':' in line:
+                    skill_line = line.split(':', 1)[1]
+                else:
+                    skill_line = line
+                skills = [s.strip() for s in re.split(r',|;', skill_line) if s.strip()]
+                break
+        return skills
+
     def extractExperience(self, text):
         """
-        Mengekstrak pengalaman kerja dari CV
+        Mengekstrak pengalaman kerja dari CV (contoh sederhana: cari baris dengan 'Experience' dan ambil 3 baris setelahnya)
         
         Argumen:
             text (str): Teks CV
@@ -127,11 +155,21 @@ class RegexExtractor:
         - Ekstrak jabatan, perusahaan, tanggal
         - Parsing deskripsi pekerjaan
         """
-        pass
-    
+        experiences = []
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            if 'experience' in line.lower():
+                for j in range(1, 4):
+                    if i + j < len(lines):
+                        exp_line = lines[i + j].strip()
+                        if exp_line:
+                            experiences.append({'desc': exp_line})
+                break
+        return experiences
+
     def extractEducation(self, text):
         """
-        Mengekstrak informasi pendidikan dari CV
+        Mengekstrak pendidikan dari CV (contoh sederhana: cari baris dengan 'Education' dan ambil 2 baris setelahnya)
         
         Argumen:
             text (str): Teks CV
@@ -144,8 +182,18 @@ class RegexExtractor:
         - Ekstrak gelar, institusi, tanggal kelulusan
         - Tangani berbagai format entri pendidikan
         """
-        pass
-    
+        educations = []
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            if 'education' in line.lower():
+                for j in range(1, 3):
+                    if i + j < len(lines):
+                        edu_line = lines[i + j].strip()
+                        if edu_line:
+                            educations.append({'desc': edu_line})
+                break
+        return educations
+
     def extractAllInformation(self, text):
         """
         Mengekstrak semua informasi dari CV
@@ -161,7 +209,14 @@ class RegexExtractor:
         - Gabungkan hasil dalam format standar
         - Tangani error dari masing-masing ekstraktor
         """
-        pass
+        return {
+            'emails': self.extractEmail(text),
+            'phones': self.extractPhones(text),
+            'summary': self.extractSummary(text),
+            'skills': self.extractSkills(text),
+            'experience': self.extractExperience(text),
+            'education': self.extractEducation(text),
+        }
 
     def cleanseText(self, text):
         
@@ -238,3 +293,80 @@ class RegexExtractor:
         text = re.sub(r'\s+', ' ', text).strip()
 
         return text
+
+# =====================
+# Contoh format hasil ekstraksi:
+#
+# {
+#   'emails': ['john.doe@email.com'],
+#   'phones': ['081234567891'],
+#   'summary': 'Professional with 5+ years experience...',
+#   'skills': ['Python', 'SQL', 'Machine Learning'],
+#   'experience': [
+#       {'desc': 'Software Engineer at ABC Corp (2020-2023)'},
+#       {'desc': 'Intern at XYZ (2019-2020)'
+#   ],
+#   'education': [
+#       {'desc': 'S1 Informatika ITB 2016-2020'},
+#       {'desc': 'SMA 1 Ciceeng 2013-2016'}
+#   ]
+# }
+# =====================
+
+
+# # from regexExtractor import RegexExtractor
+
+# # Contoh teks CV sederhana untuk pengujian
+# sample_text = '''
+# Nama: John Doe
+# Email: john.doe@email.com
+# Phone: 081234567891, +62 812-3456-7890
+
+# Summary:
+# Professional with 5+ years experience in software engineering.
+
+# Skills: Python, SQL, Machine Learning, Communication
+
+# Experience:
+# Software Engineer at ABC Corp (2020-2023)
+# Intern at XYZ (2019-2020)
+
+# Education:
+# S1 Informatika ITB 2016-2020
+# SMA 1 Bandung 2013-2016
+# '''
+
+# def main():
+#     print("=== RegexExtractor Test ===\n")
+#     extractor = RegexExtractor()
+
+#     print("--- Testing extractEmail ---")
+#     print(extractor.extractEmail(sample_text))
+
+#     print("\n--- Testing extractPhones (hanya digit, 12 digit) ---")
+#     print(extractor.extractPhones(sample_text, digit_length=12))
+
+#     print("\n--- Testing extractPhone (semua format mentah) ---")
+#     print(extractor.extractPhone(sample_text))
+
+#     print("\n--- Testing extractSummary ---")
+#     print(extractor.extractSummary(sample_text))
+
+#     print("\n--- Testing extractSkills ---")
+#     print(extractor.extractSkills(sample_text))
+
+#     print("\n--- Testing extractExperience ---")
+#     print(extractor.extractExperience(sample_text))
+
+#     print("\n--- Testing extractEducation ---")
+#     print(extractor.extractEducation(sample_text))
+
+#     print("\n--- Testing extractAllInformation ---")
+#     from pprint import pprint
+#     pprint(extractor.extractAllInformation(sample_text))
+
+#     print("\n=== Test Selesai ===\n")
+
+# if __name__ == "__main__":
+#     main()
+# # 

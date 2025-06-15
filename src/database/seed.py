@@ -94,7 +94,8 @@ class DataSeeder:
                 continue
 
             chosen_pdf = random.choice(pdf_files)
-            cv_path = str(chosen_pdf)
+            project_root = Path(__file__).resolve().parent.parent.parent
+            cv_path = str(chosen_pdf.relative_to(project_root))
 
             # insert ke AD
             insert_detail = """

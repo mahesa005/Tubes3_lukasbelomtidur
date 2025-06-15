@@ -1,82 +1,44 @@
-# ===== src/gui/styles.py =====
-"""
-Styles dan Tema untuk aplikasi ATS
-Tujuan: Sentralisasi styling untuk konsistensi UI
-"""
-
-# Stylesheet tema gelap modern
+# ===== styles.py =====
 DARK_THEME = """
 QMainWindow {
-    background-color: #2b2b2b;
+    background-color: #1e1e1e;
     color: #ffffff;
 }
-
 QWidget {
     background-color: #2b2b2b;
     color: #ffffff;
 }
-
 QPushButton {
-    background-color: #404040;
-    border: 1px solid #555555;
-    border-radius: 5px;
-    padding: 8px 15px;
+    background-color: #3c3c3c;
+    color: white;
+    border-radius: 8px;
+    padding: 8px;
     font-weight: bold;
 }
-
 QPushButton:hover {
     background-color: #505050;
-    border-color: #777777;
 }
-
-QPushButton:pressed {
-    background-color: #353535;
-}
-
-QLineEdit {
+QLineEdit, QTextEdit, QSpinBox {
     background-color: #404040;
-    border: 1px solid #555555;
-    border-radius: 3px;
+    border: 1px solid #666;
     padding: 5px;
-}
-
-QLineEdit:focus {
-    border-color: #0078d4;
-}
-
-QTextEdit {
-    background-color: #404040;
-    border: 1px solid #555555;
-    border-radius: 3px;
-}
-
-QScrollArea {
-    background-color: #353535;
-    border: none;
-}
-
-QLabel {
+    border-radius: 5px;
     color: #ffffff;
 }
-
 QGroupBox {
-    font-weight: bold;
-    border: 1px solid #555555;
+    border: 1px solid #555;
     border-radius: 5px;
     margin-top: 10px;
-    padding-top: 10px;
 }
-
 QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;
-    padding: 0 5px 0 5px;
+    padding: 0 3px 0 3px;
+    font-weight: bold;
 }
 """
 
-# Stylesheet tema terang
-LIGHT_THEME = """
-QMainWindow {
+LIGHT_THEME = """ QMainWindow {
     background-color: #ffffff;
     color: #000000;
 }
@@ -127,14 +89,8 @@ QScrollArea {
 """
 
 def applyTheme(app, theme='dark'):
-    """
-    Terapkan tema ke aplikasi
-
-    Args:
-        app (QApplication): Instance aplikasi Qt
-        theme (str): Nama tema ('dark' atau 'light')
-    """
     if theme == 'dark':
         app.setStyleSheet(DARK_THEME)
     else:
         app.setStyleSheet(LIGHT_THEME)
+

@@ -1,101 +1,127 @@
-# ===== src/gui/resultWidget.py =====
-"""
-Widget Hasil untuk menampilkan hasil pencarian CV
-Tujuan: Menampilkan hasil pencarian dalam format yang mudah dibaca pengguna
-"""
-
+# ===== resultWidget.py =====
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 class ResultWidget(QWidget):
-    """
-    Widget untuk menampilkan hasil pencarian CV
-    
-    Sinyal:
-        resultSelected: Dipicu ketika pengguna memilih salah satu hasil
-        viewCVRequested: Dipicu ketika pengguna ingin melihat CV asli
-        
-    TODO:
-    - Desain layout untuk menampilkan hasil
-    - Tampilkan jumlah kecocokan dan highlight keyword
-    - Sediakan aksi (Ringkasan, Lihat CV)
-    - Tangani sorting dan filtering
-    """
-    
-    resultSelected = pyqtSignal(int)  # application_id
-    viewCVRequested = pyqtSignal(str)  # cv_path
-    
+    resultSelected = pyqtSignal(int)
+    viewCVRequested = pyqtSignal(str)
+
     def __init__(self):
-        """Inisialisasi widget hasil"""
         super().__init__()
         self.searchResults = []
         self.initUI()
-    
+
     def initUI(self):
-        """
-        Inisialisasi antarmuka pengguna
-        
-        TODO:
-        - Buat layout untuk hasil
-        - Tambahkan kartu/item hasil pencarian
-        - Sertakan area scroll untuk banyak hasil
-        - Tambahkan opsi sorting
-        """
-        pass
-    
+        self.layout = QVBoxLayout()
+        self.scrollArea = QScrollArea()
+        self.resultsContainer = QWidget()
+        self.resultsLayout = QVBoxLayout()
+        self.resultsContainer.setLayout(self.resultsLayout)
+        self.scrollArea.setWidget(self.resultsContainer)
+        self.scrollArea.setWidgetResizable(True)
+        self.layout.addWidget(self.scrollArea)
+        self.setLayout(self.layout)
+
     def updateResults(self, results, searchTime):
-        """
-        Perbarui tampilan hasil pencarian
+        self.clearResults()
         
-        Argumen:
-            results (list): Daftar hasil pencarian
-            searchTime (dict): Dictionary dengan waktu eksekusi
+        if not results:
+            noResultLabel = QLabel("Tidak ada hasil ditemukan")
+            noResultLabel.setAlignment(Qt.AlignCenter)
+            self.resultsLayout.addWidget(noResultLabel)
+            return
             
-        TODO:
-        - Bersihkan hasil sebelumnya
-        - Buat kartu hasil untuk setiap hasil
-        - Tampilkan informasi waktu pencarian
-        - Urutkan berdasarkan relevansi kecocokan
-        """
-        pass
-    
+        for result in results:
+            card = self.createResultCard(result)
+            self.resultsLayout.addWidget(card)
+            
+        # Tampilkan informasi pencarian
+        if isinstance(searchTime, dict):
+            processing_time = searchTime.get('processing_time_ms', 0)
+            total_matches = searchTime.get('total_matches', 0)
+            info_text = f"Ditemukan {total_matches} hasil dalam {processing_time:.1f}ms"
+        else:
+            info_text = f"Pencarian selesai dalam {searchTime.get('time_ms', 0)}ms"
+            
+        infoLabel = QLabel(info_text)
+        infoLabel.setStyleSheet("font-style: italic; color: gray;")
+        self.resultsLayout.addWidget(infoLabel)
+
     def createResultCard(self, result):
-        """
-        Buat kartu untuk satu hasil pencarian
+        card = QGroupBox(result.get('name', 'Unknown'))
+        layout = QVBoxLayout()
+
+        # Header dengan nama dan score
+        headerLayout = QHBoxLayout()
+        nameLabel = QLabel(result.get('name', 'Unknown'))
+        nameLabel.setStyleSheet("font-weight: bold; font-size: 14px;")
         
-        Argumen:
-            result (dict): Data hasil pencarian
-            
-        Return:
-            QWidget: Widget kartu untuk hasil
-            
-        TODO:
-        - Desain layout kartu
-        - Tampilkan nama pelamar
-        - Tampilkan jumlah kecocokan dan keyword
-        - Tambahkan tombol Ringkasan dan Lihat CV
-        """
-        pass
-    
-    def onSummaryClicked(self, applicationId):
-        """
-        Tangani klik tombol Ringkasan
+        scoreLabel = QLabel(f"Match: {result.get('match_score', 0):.1f}%")
+        scoreLabel.setStyleSheet("color: green; font-weight: bold;")
         
-        Argumen:
-            applicationId (int): ID aplikasi
-        """
-        pass
-    
-    def onViewCVClicked(self, cvPath):
-        """
-        Tangani klik tombol Lihat CV
+        headerLayout.addWidget(nameLabel)
+        headerLayout.addStretch()
+        headerLayout.addWidget(scoreLabel)
         
-        Argumen:
-            cvPath (str): Path ke file CV
-        """
-        pass
-    
+        # Keywords yang ditemukan
+        keywords = result.get('keywords', {})
+        if keywords:
+            keywordText = "Keywords: " + ", ".join([f"{k}({v})" for k, v in keywords.items()])
+            keywordLabel = QLabel(keywordText)
+            keywordLabel.setStyleSheet("font-size: 11px; color: gray;")
+            keywordLabel.setWordWrap(True)
+        else:
+            keywordLabel = QLabel("No keywords matched")
+            keywordLabel.setStyleSheet("font-size: 11px; color: gray;")
+
+        # Buttons
+        buttonLayout = QHBoxLayout()
+        summaryButton = QPushButton("Ringkasan")
+        cvButton = QPushButton("Lihat CV")
+        
+        summaryButton.setMaximumWidth(100)
+        cvButton.setMaximumWidth(100)        # Connect buttons dengan data yang benar
+        application_id = result.get('application_id')
+        cv_path = result.get('cv_path', '')
+        
+        # Create proper signal connections dengan closure
+        def create_summary_handler(app_id):
+            def handler():
+                print(f"🔔 Ringkasan button clicked for application_id: {app_id}")
+                if app_id is not None:
+                    self.resultSelected.emit(app_id)
+                else:
+                    print("❌ application_id is None, cannot emit signal")
+            return handler
+        
+        def create_cv_handler(path):
+            def handler():
+                print(f"🔔 CV button clicked for path: {path}")
+                self.viewCVRequested.emit(path)
+            return handler
+        
+        # Connect buttons dengan proper handlers
+        summaryButton.clicked.connect(create_summary_handler(application_id))
+        cvButton.clicked.connect(create_cv_handler(cv_path))
+        
+        # Debug print untuk memastikan data terkirim
+        print(f"🔗 ResultWidget: Creating button for application_id={application_id}, cv_path={cv_path}")
+
+        buttonLayout.addWidget(summaryButton)
+        buttonLayout.addWidget(cvButton)
+        buttonLayout.addStretch()
+
+        # Layout utama card
+        layout.addLayout(headerLayout)
+        layout.addWidget(keywordLabel)
+        layout.addLayout(buttonLayout)
+        
+        card.setLayout(layout)
+        return card
+
     def clearResults(self):
-        """Bersihkan semua hasil pencarian"""
-        pass
+        for i in reversed(range(self.resultsLayout.count())):
+            widget = self.resultsLayout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)

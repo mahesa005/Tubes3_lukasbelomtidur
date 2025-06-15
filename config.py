@@ -5,8 +5,8 @@ from pathlib import Path
 DATABASE_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': '',
-    'database': 'ats_database',
+    'password': 'root',
+    'database': 'ats_cv_matcher',
     'port': 3306
 }
 

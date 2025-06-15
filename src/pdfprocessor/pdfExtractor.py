@@ -5,7 +5,7 @@ Tujuan: Ekstraksi teks dari file PDF CV
 """
 
 import pypdf
-from regexExtractor import RegexExtractor
+from .regexExtractor import RegexExtractor
 import logging
 import os
 from pathlib import Path
