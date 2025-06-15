@@ -23,21 +23,36 @@ from src.models.ResultCard import (
 from src.models.SummaryCard import (
     print_summarycard,
 )
-from config import DATABASE_CONFIG
+from config import DATA_DIR, DATABASE_CONFIG
+import os
+from pathlib import Path
+
 
 def main():
     cv = r'data/ACCOUNTANT/11163645.pdf'  # sesuaikan
     
     print("=== Database Queries ===")
 
-    db = DatabaseConnection()
+
+    db = DatabaseConnection()   
     db.connect()
     db.useDatabase(DATABASE_CONFIG['database'])
 
-    try:
-        rc = get_result_card_by_cv_path(db.connection, cv)
-        print("=== Result Card ===")
-        print_resultcard(rc)
+    rel_paths = get_all_cv_paths(db.connection)
+
+    for rel in rel_paths[:5]:           
+        rel_stripped = rel.split('data/', 1)[-1]
+
+        full_path = DATA_DIR / rel_stripped
+
+        print(f"Rel: {rel}")
+        print(f"Abs: {full_path}")
+        print("Exists:", full_path.exists())
+
+        if full_path.exists():
+            rc = get_result_card_by_cv_path(db.connection, rel)
+            print_resultcard(rc)
+        print()
 
         print("=== Getting Summary Data ===")
         sc = get_summary_data_by_cv_path(db.connection, cv)

@@ -5,7 +5,7 @@ from pathlib import Path
 DATABASE_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'root',
+    'password': '',
     'database': 'ats_database',
     'port': 3306
 }
