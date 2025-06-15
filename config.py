@@ -6,7 +6,7 @@ DATABASE_CONFIG = {
     'host': 'localhost',
     'user': 'root',
     'password': 'root',
-    'database': 'database_name    .\Tubes3_lukasbelomtidur\bin\run.bat',
+    'database': 'ats_cv_matcher',
     'port': 3306
 }
 

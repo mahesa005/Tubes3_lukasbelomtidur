@@ -1,4 +1,3 @@
-
 import mysql.connector
 from mysql.connector import Error
 import logging
@@ -40,10 +39,9 @@ class DatabaseConnection:
         try:
             if self.cursor:
                 self.cursor.close()
-                logger.info("Cursor ditutup.")
             if self.connection:
                 self.connection.close()
-                logger.info("Koneksi database ditutup.")
+            logger.info("Koneksi database ditutup.")
         except Error as e:
             logger.error(f"Error saat menutup koneksi: {e}")
 

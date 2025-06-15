@@ -3,10 +3,9 @@ Pattern Matcher - Antarmuka utama untuk semua algoritma pencocokan pola
 Tujuan: Antarmuka terpadu untuk operasi pencocokan pola
 """
 
-
-from BoyerMoore import BoyerMoore
-from KnuthMorrisPratt import KnuthMorrisPratt
-from LevenshteinDistance import LevenshteinDistance
+from .BoyerMoore import BoyerMoore
+from .KnuthMorrisPratt import KnuthMorrisPratt
+from .LevenshteinDistance import LevenshteinDistance
 import time
 
 class PatternMatcher:
@@ -27,10 +26,9 @@ class PatternMatcher:
         self.levenshtein = LevenshteinDistance()
         # self.ac = AhoCorasick() # ntar kalo implement Aho-Corasick 
         
-    
     def exactMatch(self, text, keywords, algorithm='KMP') -> dict:
         """
-        Melakukan pencocokan pola secara eksak
+        Melakukan pencocokan pola secara eksak (case-insensitive)
         
         Argumen:
             text (str): Teks yang akan dicari
@@ -39,33 +37,33 @@ class PatternMatcher:
             
         Mengembalikan:
             dict: Hasil yang berisi kecocokan dan info waktu eksekusi
-            
-        TODO:
-        - Implementasikan pencocokan eksak menggunakan algoritma yang dipilih
-        - Ukur waktu eksekusi
-        - Hitung jumlah kemunculan untuk setiap kata kunci
-        - Kembalikan hasil yang komprehensif
         """
-        start = time.time() # waktu jalan
-        result = {} # dict 
-        if algorithm.upper() == 'KMP': #kalo milih kmp.upper = KMP
-            matches = self.kmp.searchMultiple(text, keywords)
-        elif algorithm.upper() == 'BM': # kalo milih BM.upper = BM
-            matches = self.boyerMoore.searchMultiple(text, keywords)
-        # elif algorithm.upper() == 'AC' ; 
-        #     matches = self.ac.SearchMultiple(text, keywords)  --- ntar kalo implement 
+        start = time.time()
+        result = {}
+          # Convert to lowercase for case-insensitive matching
+        text_lower = text.lower()
+        keywords_lower = [keyword.lower() for keyword in keywords]
+        
+        if algorithm.upper() == 'KMP':
+            matches = self.kmp.searchMultiple(text_lower, keywords_lower)
+        elif algorithm.upper() == 'BM' or algorithm.upper() == 'BOYER-MOORE':
+            matches = self.boyerMoore.searchMultiple(text_lower, keywords_lower)
         else: 
-            raise ValueError("Algoritma tidak dikenali. Pilih 'KMP' atau 'BM' (atau 'AC').") # kek throw kalo di java
-        for keyword in keywords:
+            raise ValueError(f"Algoritma tidak dikenali: '{algorithm}'. Pilih 'KMP', 'BM', atau 'Boyer-Moore'.")
+            
+        # Map results back to original keywords (preserve original case)
+        for i, keyword in enumerate(keywords):
+            keyword_lower = keywords_lower[i]
             result[keyword] = {
-                'positions': matches.get(keyword, []),  # ngambil posisi pattern yang ketemu (index pertamanya pattern ditext)
-                'count': len(matches.get(keyword, [])) # nyimpen jumlah kemunculanny 
+                'positions': matches.get(keyword_lower, []),
+                'count': len(matches.get(keyword_lower, []))
             }
+            
         end = time.time() - start 
-        return { # nested dict
-            'matches': result, # hasilnya dalam dict 
+        return {
+            'matches': result,
             'algorithm': algorithm,
-            'endtime': f"{end*1000:.2f} ms" # waktu dalam milidetik
+            'endtime': f"{end*1000:.2f} ms"
         }
 
 
@@ -95,14 +93,9 @@ class PatternMatcher:
             for idx, token in enumerate(tokens): # maksuddari enumerate itu buat dapetin indexnya juga
                 maxLen = max(len(token), len(keyword)) # bakal cari yang panjangnya maksimal dari keyword ama hasil split tadi
                 if maxLen == 0: # kalo misalkan panjangnya 0, yaudah gaada yang bisa dibandingin
-                    similarity = 1.0
-
-                # WARNING: INI PAKE LEVENSHTEIN DISTANCE
+                    similarity = 1.0                # WARNING: INI PAKE LEVENSHTEIN DISTANCE
                 else: # kalo ga 0, pake Levenshtein (HARUSNYA DISINI MANGGIL DARI LevenshteinDistance.py)
-                    dist = self.levenshtein.calculate(token, keyword) #ini cari jaraknya berdasarkan total subtitusi, hapus, insert
-                    similarity = 1 - dist / maxLen # rumusnya ini, harusnya di LevenshteinDistance.py ada fungsi similarity yang bisa dipake
-                    # jadi ntar ..... 
-                    # manggilnya sim = self.levenshtein.similarity(token, keyword)
+                    similarity = self.levenshtein.similarity(token, keyword)
                 if similarity >= threshold: # ini jadi sim >= threshold 
                     fuzzyResults.append({'token': token, 'index': idx, 'similarity': similarity}) # similarity => sim ; 
                 # WARNING: INI PAKE LEVENSHTEIN DISTANCE

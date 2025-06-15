@@ -1,44 +1,23 @@
-import sys
-import os
-from pathlib import Path
-
-# Tambahkan direktori src ke path Python
-sys.path.append(str(Path(__file__).parent / 'src'))
-
 from PyQt5.QtWidgets import QApplication
-from gui.MainWindow import MainWindow
-from utils.Logger import setupLogger
+import sys
+from src.gui.MainWindow import MainWindow
+from src.gui.styles import applyTheme
+
 
 def main():
-    """
-    Fungsi utama untuk memulai aplikasi ATS
+    app = QApplication(sys.argv)
 
-    TODO:
-    - Inisialisasi sistem logging
-    - Membuat instance QApplication
-    - Inisialisasi dan tampilkan main window
-    - Menangani keluar aplikasi
-    """
+    # Terapkan tema dark yang modern
+    applyTheme(app, theme='dark')
 
-    # Inisialisasi logging
-    logger = setupLogger()
-    logger.info("Memulai Aplikasi ATS CV Digital")
+    # Buat dan tampilkan jendela utama
+    window = MainWindow()
+    window.setWindowTitle("CV Matcher - ATS System")
+    window.resize(1000, 700)
+    window.show()
 
-    try:
-        # Membuat aplikasi Qt
-        #ok
-        app = QApplication(sys.argv)
+    sys.exit(app.exec_())
 
-        # Membuat dan menampilkan main window
-        mainWindow = MainWindow()
-        mainWindow.show()
 
-        # Memulai event loop
-        sys.exit(app.exec_())
-
-    except Exception as e:
-        logger.error(f"Terjadi error saat memulai aplikasi: {str(e)}")
-        sys.exit(1)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

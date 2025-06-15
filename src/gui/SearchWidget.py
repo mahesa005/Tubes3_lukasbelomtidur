@@ -1,65 +1,51 @@
-"""
-Widget Pencarian untuk input kata kunci dan pemilihan algoritma
-Tujuan: Menyediakan antarmuka pencarian untuk pencocokan CV
-"""
-
+# ===== searchWidget.py =====
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 class SearchWidget(QWidget):
-    """
-    Widget antarmuka pencarian
-    
-    Sinyal:
-        searchRequested: Dipancarkan saat pencarian diminta
-        
-    TODO:
-    - Membuat field input kata kunci
-    - Menambahkan pemilihan algoritma (KMP/Boyer-Moore)
-    - Menambahkan selector jumlah hasil teratas
-    - Menyertakan tombol pencarian
-    """
-    
-    searchRequested = pyqtSignal(list, str, int)  # keywords, algorithm, topMatches
-    
+    searchRequested = pyqtSignal(list, str, int)
+
     def __init__(self):
-        """Inisialisasi widget pencarian"""
         super().__init__()
         self.initUI()
         self.setupConnections()
-    
+
     def initUI(self):
-        """
-        Inisialisasi antarmuka pengguna
+        layout = QVBoxLayout()
+
+        self.keywordInput = QLineEdit()
+        self.keywordInput.setPlaceholderText("Masukkan kata kunci, pisahkan dengan koma")
+
+        self.kmpRadio = QRadioButton("KMP")
+        self.bmRadio = QRadioButton("Boyer-Moore")
+        self.kmpRadio.setChecked(True)
+
+        algorithmLayout = QHBoxLayout()
+        algorithmLayout.addWidget(self.kmpRadio)
+        algorithmLayout.addWidget(self.bmRadio)
+
+        self.topMatchesSpin = QSpinBox()
+        self.topMatchesSpin.setRange(1, 100)
+        self.topMatchesSpin.setValue(5)
+
+        self.searchButton = QPushButton("Cari")
+
+        layout.addWidget(QLabel("Kata Kunci:"))
+        layout.addWidget(self.keywordInput)
+        layout.addWidget(QLabel("Algoritma:"))
+        layout.addLayout(algorithmLayout)
+        layout.addWidget(QLabel("Jumlah hasil teratas:"))
+        layout.addWidget(self.topMatchesSpin)
+        layout.addWidget(self.searchButton)
         
-        TODO:
-        - Membuat layout dengan semua komponen
-        - Menambahkan input kata kunci (QLineEdit)
-        - Menambahkan radio button algoritma
-        - Menambahkan spinner jumlah hasil teratas
-        - Menambahkan tombol pencarian
-        - Memberi gaya pada komponen
-        """
-        pass
-    
+        self.setLayout(layout)
+
     def setupConnections(self):
-        """Mengatur koneksi widget"""
-        pass
-    
+        self.searchButton.clicked.connect(self.onSearchClicked)
+
     def onSearchClicked(self):
-        """
-        Menangani klik tombol pencarian
-        
-        TODO:
-        - Validasi input
-        - Parsing kata kunci (dipisahkan koma)
-        - Mendapatkan algoritma yang dipilih
-        - Mendapatkan jumlah hasil teratas
-        - Memancarkan sinyal searchRequested
-        """
-        pass
-    
-    def clearSearch(self):
-        """Menghapus input pencarian"""
-        pass
+        keywords = [k.strip() for k in self.keywordInput.text().split(',') if k.strip()]
+        algorithm = "KMP" if self.kmpRadio.isChecked() else "Boyer-Moore"
+        topMatches = self.topMatchesSpin.value()
+        self.searchRequested.emit(keywords, algorithm, topMatches)
