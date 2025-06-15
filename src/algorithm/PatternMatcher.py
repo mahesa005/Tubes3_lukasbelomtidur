@@ -68,7 +68,7 @@ class PatternMatcher:
         }
 
 
-    def fuzzyMatch(self, text, keywords, threshold=0.7) -> dict:
+    def fuzzyMatch(self, text, keywords, threshold=0.7, caseSensitive=True) -> dict:
         """
         Melakukan pencocokan pola fuzzy menggunakan jarak Levenshtein
         
@@ -76,42 +76,25 @@ class PatternMatcher:
             text (str): Teks yang akan dicari
             keywords (list): Daftar kata kunci yang akan dicari
             threshold (float): Ambang batas kemiripan minimum
+            caseSensitive (bool): Jika True, pencocokan akan peka huruf besar/kecil.
             
         Mengembalikan:
-            dict: Hasil yang berisi kecocokan fuzzy dan info waktu eksekusi
-            
-        TODO:
-        - Tokenisasi teks menjadi kata-kata
-        - Temukan kecocokan fuzzy untuk setiap kata kunci
-        - Filter berdasarkan ambang batas kemiripan
-        - Ukur waktu eksekusi
+            dict: Hasil yang berisi kecocokan fuzzy (keyword: count) dan info waktu eksekusi
         """
-        start = time.time()
-        result = {}
-        tokens = text.split() #ini maksudnya displit, misal "lukas raja" jadi ["lukas", "raja"]
-        for keyword in keywords: 
-            fuzzyResults = [] # buat list buat nyimpen hasil fuzzy tiap keyword
-            for idx, token in enumerate(tokens): # maksuddari enumerate itu buat dapetin indexnya juga
-                maxLen = max(len(token), len(keyword)) # bakal cari yang panjangnya maksimal dari keyword ama hasil split tadi
-                if maxLen == 0: # kalo misalkan panjangnya 0, yaudah gaada yang bisa dibandingin
-                    similarity = 1.0
+        start = time.perf_counter()
+        
+        matches_counts = self.levenshtein.count_every_word_occurrence(
+            text, keywords, threshold=threshold, caseSensitive=caseSensitive
+        )
+        
+        end = time.perf_counter()
+        execution_time_ms = (end - start) * 1000 
 
-                # WARNING: INI PAKE LEVENSHTEIN DISTANCE
-                else: # kalo ga 0, pake Levenshtein (HARUSNYA DISINI MANGGIL DARI LevenshteinDistance.py)
-                    dist = self.levenshtein.distance(token, keyword) #ini cari jaraknya berdasarkan total subtitusi, hapus, insert
-                    similarity = 1 - dist / maxLen # rumusnya ini, harusnya di LevenshteinDistance.py ada fungsi similarity yang bisa dipake
-                    # jadi ntar ..... 
-                    # manggilnya sim = self.levenshtein.similarity(token, keyword)
-                if similarity >= threshold: # ini jadi sim >= threshold 
-                    fuzzyResults.append({'token': token, 'index': idx, 'similarity': similarity}) # similarity => sim ; 
-                # WARNING: INI PAKE LEVENSHTEIN DISTANCE
-
-            result[keyword] = fuzzyResults
-        end = time.time() - start
         return {
-            'matches': result,
+            'matches': matches_counts, 
             'threshold': threshold,
-            'endtime': end + "ms"  # waktu eksekusi dalam milisekon
+            'caseSensitive': caseSensitive,
+            'execution_time_ms': f"{execution_time_ms:.2f}ms"
         }
 
     def hybridMatch(self, text, keywords, algorithm='KMP', fuzzyThreshold=0.7) -> dict:

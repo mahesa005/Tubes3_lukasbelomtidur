@@ -2,10 +2,12 @@ import sys
 from pathlib import Path
 from PyQt5.uic import loadUi
 from PyQt5.QtWidgets import QApplication, QMainWindow
-
 # tambahkan src ke path
 sys.path.append(str(Path(__file__).parent / 'src'))
 from utils.Logger import setupLogger
+from src.algorithm.PatternMatcher import PatternMatcher
+from src.database.connection import DatabaseConnection
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -35,6 +37,11 @@ def load_results(self):
     results = []
 
 def main():
+    # db = DatabaseConnection()
+    # if not db.connect(): exit(1)
+    # db.useDatabase("ats_database")  
+    # db.createTables()
+
     logger = setupLogger()
     logger.info("Memulai Aplikasi ATS CV Digital")
 
