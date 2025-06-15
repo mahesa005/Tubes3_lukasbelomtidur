@@ -128,7 +128,7 @@ class DatabaseConnection:
                 host     = DATABASE_CONFIG['host'],
                 user     = DATABASE_CONFIG['user'],
                 password = DATABASE_CONFIG['password'],
-                port     = DATABASE_CONFIG['port']
+                port     = DATABASE_CONFIG['port'],
             )
             tmp_cursor = tmp_conn.cursor()
             tmp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
