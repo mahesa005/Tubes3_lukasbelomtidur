@@ -211,23 +211,28 @@ def get_summary_data_by_cv_path(conn, cv_path):
             return None
         full_name, dob, phone, path = row
         dob_str = dob.isoformat() if dob else ""
-        
-        # Extract CV data
+          # Extract CV data
         try:
+            print("Attempting to extract CV data...")
             pdf_extractor = PDFExtractor()
             regex_extractor = RegexExtractor()
             
             # Create full path for PDF extraction
             pdf_full_path = f"src/archive/data/{cv_path}"
+            print(f"PDF path: {pdf_full_path}")
             
             # Extract text from PDF
             extracted_text = pdf_extractor.PDFExtractForMatch(pdf_full_path)
             if extracted_text:
+                print(f"PDF extracted successfully, {len(extracted_text)} characters")
                 # Extract CV sections
                 cv_sections = regex_extractor.extract_cv_sections(extracted_text)
                 skills_list = cv_sections['skills']
                 work_experience_list = cv_sections['work_experience']
                 education_list = cv_sections['education']
+                print(f"CV sections extracted: {len(skills_list)} skills, {len(work_experience_list)} experience, {len(education_list)} education")
+            else:
+                print("No text extracted from PDF")
         except Exception as cv_error:
             print(f"Error extracting CV data: {cv_error}")
             # Continue with empty lists if CV extraction fails

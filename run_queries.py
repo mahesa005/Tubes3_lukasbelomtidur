@@ -26,7 +26,7 @@ from src.models.SummaryCard import (
 from config import DATABASE_CONFIG
 
 def main():
-    cv = r'data/FINANCE/12071138.pdf'  # sesuaikan
+    cv = r'data/ACCOUNTANT/11163645.pdf'  # sesuaikan
     
     print("=== Database Queries ===")
 
@@ -39,6 +39,7 @@ def main():
         print("=== Result Card ===")
         print_resultcard(rc)
 
+        print("=== Getting Summary Data ===")
         sc = get_summary_data_by_cv_path(db.connection, cv)
         print("=== Summary Card with Extracted CV Data ===")
         print_summarycard(sc)
