@@ -447,8 +447,9 @@ SOFTWARE.
 
 ## 👥 Authors & Contributors
 
-- **Your Name** - *Initial work* - [@yourusername](https://github.com/yourusername)
-- **Team Members** - *Development* - [Contributors](https://github.com/yourusername/ats-applicant-tracking-system/contributors)
+- **Mahesa Fadhillah Andre** - *13523140* - [@mahesa005](https://github.com/mahesa005)
+- **Jonathan Kenan Budianto** - *13523139* - [@jonathankenan](https://github.com/jonathankenan)
+- **Lukas Raja Agripa** - *13523158* - [@rlukassa](https://github.com/rlukassa)
 
 ## 🔗 Links
 - **Demo Video**: [YouTube Link]
