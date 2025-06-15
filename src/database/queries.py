@@ -113,9 +113,8 @@ def get_application_role_by_cv_path(conn, cv_path):
     cursor.close()
     return row[0] if row else None
 
-
 def get_result_card_by_cv_path(conn, cv_path):
-    cursor = conn.cursor()
+    cursor = conn.cursor(buffered=True)
     cursor.execute(
         "SELECT CONCAT(ap.first_name, ' ', ap.last_name) AS full_name, ad.cv_path "
         "FROM ApplicantProfile ap "
@@ -123,7 +122,9 @@ def get_result_card_by_cv_path(conn, cv_path):
         "WHERE ad.cv_path = %s;", (cv_path,)
     )
     row = cursor.fetchone()
+    cursor.fetchall()
     cursor.close()
+
     if not row:
         return None
     full_name, path = row
@@ -131,7 +132,7 @@ def get_result_card_by_cv_path(conn, cv_path):
 
 
 def get_summary_data_by_cv_path(conn, cv_path):
-    cursor = conn.cursor()
+    cursor = conn.cursor(buffered=True)
     cursor.execute(
         "SELECT CONCAT(ap.first_name, ' ', ap.last_name) AS full_name, "
         "ap.date_of_birth, ap.phone_number, ad.cv_path "
@@ -140,7 +141,9 @@ def get_summary_data_by_cv_path(conn, cv_path):
         "WHERE ad.cv_path = %s;", (cv_path,)
     )
     row = cursor.fetchone()
+    cursor.fetchall()
     cursor.close()
+
     if not row:
         return None
     full_name, dob, phone, path = row
@@ -156,7 +159,7 @@ def get_summary_data_by_cv_path(conn, cv_path):
     )
 
 def get_all_cv_paths(conn):
-    cursor = conn.cursor()
+    cursor = conn.cursor(buffered=True)
     cursor.execute("SELECT cv_path FROM ApplicationDetail;")
     rows = cursor.fetchall()
     cursor.close()
