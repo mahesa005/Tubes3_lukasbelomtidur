@@ -1,4 +1,9 @@
+import re
+
 from src.database.connection import DatabaseConnection
+from src.pdfprocessor.pdfExtractor import PDFExtractor
+from src.pdfprocessor.regexExtractor import RegexExtractor
+
 from src.database.queries import (
     get_applicant_id_by_cv_path,
     get_first_name_by_cv_path,

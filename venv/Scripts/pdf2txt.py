@@ -1,4 +1,4 @@
-#!C:\Users\Mahesa\OneDrive\ITB\Coding\College\Academic\IF\Smt-4\Strategi Algoritma\Tubes\Tubes 3\Tubes3_lukasbelomtidur\venv\Scripts\python.exe
+#!C:\Users\MSI\Desktop\tubes3stima\Tubes3_lukasbelomtidur\venv\Scripts\python.exe
 """A command line tool for extracting text and images from PDF and
 output it to plain text, html, xml or tags.
 """
